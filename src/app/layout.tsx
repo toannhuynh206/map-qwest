@@ -19,8 +19,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${nunito.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col font-sans bg-emerald-50 text-gray-800">
+    <html lang="en" className={`${nunito.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        {/* Apply saved theme before first paint to prevent flash */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('web-theme')||'light';if(t==='dark')document.documentElement.classList.add('dark');if(t==='colorful')document.documentElement.classList.add('colorful');}catch(e){}})();`,
+          }}
+        />
+      </head>
+      <body className="min-h-full flex flex-col font-sans">
         <TRPCProvider>{children}</TRPCProvider>
       </body>
     </html>

@@ -1,26 +1,136 @@
 @import "tailwindcss";
 
+@theme {
+  /* Earth palette — greens (land) + blues (ocean) */
+  --color-earth-50: #f0fdf4;
+  --color-earth-100: #dcfce7;
+  --color-earth-200: #bbf7d0;
+  --color-earth-300: #6ee7b7;
+  --color-earth-400: #34d399;
+  --color-earth-500: #10b981;
+  --color-earth-600: #059669;
+  --color-earth-700: #047857;
+  --color-earth-800: #065f46;
+  --color-earth-900: #064e3b;
+
+  --color-ocean-50: #f0f9ff;
+  --color-ocean-100: #e0f2fe;
+  --color-ocean-200: #bae6fd;
+  --color-ocean-300: #7dd3fc;
+  --color-ocean-400: #38bdf8;
+  --color-ocean-500: #0ea5e9;
+  --color-ocean-600: #0284c7;
+  --color-ocean-700: #0369a1;
+  --color-ocean-800: #075985;
+  --color-ocean-900: #0c4a6e;
+
+  --color-sun-300: #fcd34d;
+  --color-sun-400: #fbbf24;
+  --color-sun-500: #f59e0b;
+
+  --color-coral-400: #fb7185;
+  --color-coral-500: #f43f5e;
+
+  --color-correct: #22c55e;
+  --color-incorrect: #ef4444;
+
+  /* Light palette — Duolingo warmth + chess.com structure */
+  --color-board-bg: #F7F7F7;
+  --color-board-card: #FFFFFF;
+  --color-board-hover: #F0F0F0;
+  --color-board-border: #E5E5E5;
+  --color-board-text: #3C3C3C;
+  --color-board-muted: #AFAFAF;
+  --color-board-green: #58CC02;
+  --color-board-green-light: #89E219;
+  --color-board-green-dark: #46A302;
+
+  --font-sans: var(--font-nunito);
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #F7F7F7;
+  --foreground: #3C3C3C;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ── Dark mode ─────────────────────────────────────────────────────────── */
+.colorful {
+  --background: #FFF8E1;
+  --foreground: #1A237E;
+
+  --color-board-bg: #FFF8E1;
+  --color-board-card: #FFFFFF;
+  --color-board-hover: #FFF3CD;
+  --color-board-border: #FFB300;
+  --color-board-text: #1A237E;
+  --color-board-muted: #E65100;
+  /* Greens stay the same */
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.dark {
+  --background: #171717;
+  --foreground: #F0F0F0;
+
+  /* Override board palette for dark theme */
+  --color-board-bg: #171717;
+  --color-board-card: #262626;
+  --color-board-hover: #333333;
+  --color-board-border: #3D3D3D;
+  --color-board-text: #F0F0F0;
+  --color-board-muted: #888888;
+  /* Greens stay the same */
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Chess.com style button */
+.btn-chunky {
+  box-shadow: 0 4px 0 0 rgba(0, 0, 0, 0.25);
+  transition: all 0.1s ease;
+}
+
+.btn-chunky:active {
+  box-shadow: 0 1px 0 0 rgba(0, 0, 0, 0.25);
+  transform: translateY(3px);
+}
+
+/* Smooth map interactions */
+.map-container svg {
+  touch-action: manipulation;
+}
+
+/* Country highlight pulse animation */
+@keyframes pulse-correct {
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+@keyframes pulse-incorrect {
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+.country-correct {
+  animation: pulse-correct 0.6s ease-in-out;
+}
+
+.country-incorrect {
+  animation: pulse-incorrect 0.6s ease-in-out;
+}
+
+/* Score pop animation */
+@keyframes score-pop {
+  0% { transform: scale(0.5); opacity: 0; }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.score-pop {
+  animation: score-pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
