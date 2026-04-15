@@ -5,6 +5,7 @@ interface QuizHeaderProps {
   incorrectCount: number;
   remaining: number;
   countryName: string;
+  questionIndex: number;
   isPlaying: boolean;
   onQuit: () => void;
   /** Countdown seconds remaining — null when timer is off */
@@ -18,6 +19,7 @@ export function QuizHeader({
   incorrectCount,
   remaining,
   countryName,
+  questionIndex,
   onQuit,
   secondsRemaining = null,
   fractionRemaining = null,

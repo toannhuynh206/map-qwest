@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useRef } from 'react';
 import { Geography } from 'react-simple-maps';
 import { useMapTheme } from '@/context/map-theme-context';
 
@@ -11,7 +11,8 @@ export type CountryFeedback =
   | 'incorrect'
   | 'reveal'
   | 'correct-locked'
-  | 'incorrect-locked';
+  | 'incorrect-locked'
+  | 'missed';           // typing mode: not guessed, revealed after give-up
 
 interface CountryPathProps {
   geography: Parameters<typeof Geography>[0]['geography'];
@@ -24,20 +25,17 @@ interface CountryPathProps {
 }
 
 const FEEDBACK_COLORS: Partial<Record<CountryFeedback, string>> = {
-  selected: '#89E219',
-  correct: '#58CC02',
-  incorrect: '#FF4B4B',
-  reveal: '#58CC02',
-  'correct-locked': 'url(#pattern-correct-locked)',
-  'incorrect-locked': 'url(#pattern-incorrect-locked)',
-};
-
-const FEEDBACK_STROKE: Partial<Record<CountryFeedback, string>> = {
-  'correct-locked': '#16a34a',
-  'incorrect-locked': '#dc2626',
+  selected:           '#89E219',
+  correct:            '#58CC02',
+  incorrect:          '#FF4B4B',
+  reveal:             '#58CC02',
+  'correct-locked':   '#86efac',
+  'incorrect-locked': '#fca5a5',
+  missed:             '#9CA3AF',  // gray — not guessed after give-up
 };
 
 const STROKE_COLOR = '#F7F7F7';
+const TAP_THRESHOLD = 10; // px — movement below this is treated as a tap
 
 function CountryPathComponent({
   geography,
@@ -49,28 +47,43 @@ function CountryPathComponent({
   onSelect,
 }: CountryPathProps) {
   const { colors } = useMapTheme();
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   const fill = useMemo(() => {
     return FEEDBACK_COLORS[feedback] ?? baseFill;
   }, [feedback, baseFill]);
 
   const isClickable = !disabled && feedback === 'none' && !dimmed;
-  const isLocked = feedback === 'correct-locked' || feedback === 'incorrect-locked';
-  const strokeColor = isLocked
-    ? (FEEDBACK_STROKE[feedback] ?? STROKE_COLOR)
-    : feedback !== 'none'
-      ? STROKE_COLOR
-      : colors.countryStroke;
+  const strokeColor = feedback !== 'none' ? STROKE_COLOR : colors.countryStroke;
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStart.current = { x: t.clientX, y: t.clientY };
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!isClickable || !touchStart.current) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStart.current.x;
+    const dy = t.clientY - touchStart.current.y;
+    if (Math.sqrt(dx * dx + dy * dy) < TAP_THRESHOLD) {
+      e.preventDefault(); // stop the 300ms click that would follow
+      onSelect(countryCode);
+    }
+    touchStart.current = null;
+  };
 
   return (
     <Geography
       geography={geography}
       fill={fill}
       stroke={strokeColor}
-      strokeWidth={isLocked ? 1 : 0.5}
+      strokeWidth={0.5}
       onClick={() => {
         if (isClickable) onSelect(countryCode);
       }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
       style={{
         default: {
           outline: 'none',

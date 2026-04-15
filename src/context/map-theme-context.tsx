@@ -12,6 +12,7 @@ export interface ThemeColors {
   miniMapLand: string;
   miniMapLandStroke: string;
   getCountryFill: (alpha3: string, region: string) => string;
+  getStateFill: (abbrev: string, region: string) => string;
 }
 
 function hash(str: string): number {
@@ -25,6 +26,14 @@ const POLITICAL_BY_REGION: Record<string, string> = {
   north_america: '#DDA0CC',
   south_america: '#A0C8DD',
   oceania: '#D4B8A0',
+};
+
+const POLITICAL_BY_US_REGION: Record<string, string> = {
+  northeast: '#85BBD4',
+  southeast: '#F5C97A',
+  midwest:   '#A8D4A0',
+  southwest: '#F4A261',
+  west:      '#DDA0CC',
 };
 
 const COLORFUL_PALETTE = [
@@ -47,6 +56,7 @@ export const THEME_COLORS: Record<MapTheme, ThemeColors> = {
     miniMapLand: '#a8c8a0',
     miniMapLandStroke: '#7aaa72',
     getCountryFill: () => '#E5E5E5',
+    getStateFill: () => '#CBD5E1',
   },
   political: {
     ocean: '#4a90d9',
@@ -57,6 +67,7 @@ export const THEME_COLORS: Record<MapTheme, ThemeColors> = {
     miniMapLand: '#F5C97A',
     miniMapLandStroke: '#D4A85A',
     getCountryFill: (_alpha3, region) => POLITICAL_BY_REGION[region] ?? '#E0C8A0',
+    getStateFill: (_abbrev, region) => POLITICAL_BY_US_REGION[region] ?? '#CBD5E1',
   },
   colorful: {
     ocean: '#EEF6FF',
@@ -67,6 +78,7 @@ export const THEME_COLORS: Record<MapTheme, ThemeColors> = {
     miniMapLand: '#FF6B6B',
     miniMapLandStroke: '#DD4444',
     getCountryFill: (alpha3) => COLORFUL_PALETTE[hash(alpha3) % COLORFUL_PALETTE.length],
+    getStateFill: (abbrev) => COLORFUL_PALETTE[hash(abbrev) % COLORFUL_PALETTE.length],
   },
   terrain: {
     ocean: '#5B8FA8',
@@ -77,6 +89,7 @@ export const THEME_COLORS: Record<MapTheme, ThemeColors> = {
     miniMapLand: '#C8D5B9',
     miniMapLandStroke: '#6B8E5E',
     getCountryFill: (alpha3) => TERRAIN_PALETTE[hash(alpha3) % TERRAIN_PALETTE.length],
+    getStateFill: (abbrev) => TERRAIN_PALETTE[hash(abbrev) % TERRAIN_PALETTE.length],
   },
 };
 

@@ -118,7 +118,6 @@ export default function QuizPage() {
   const questionKey = currentQuestion
     ? `${currentIndex}-${currentQuestion.countryCode}`
     : String(currentIndex);
-
   const { secondsRemaining, fractionRemaining } = useQuestionTimer({
     timer: config.timer,
     isActive: status === 'playing',
@@ -248,6 +247,7 @@ export default function QuizPage() {
           incorrectCount={incorrectCount}
           remaining={remaining}
           countryName={currentQuestion!.countryName}
+          questionIndex={currentIndex}
           isPlaying={status === 'playing' || status === 'feedback'}
           onQuit={handleQuitRequest}
           secondsRemaining={secondsRemaining}

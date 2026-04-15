@@ -19,6 +19,15 @@ const QUIZZES = [
     accent: '#58CC02',
   },
   {
+    id: 'us-states',
+    title: 'US States',
+    description: 'Pin all 50 states on the map',
+    icon: '🗺️',
+    href: '/play/states',
+    available: true,
+    accent: '#007AFF',
+  },
+  {
     id: 'guess-flag',
     title: 'Guess the Flag',
     description: 'Match flags to their countries',
@@ -30,10 +39,10 @@ const QUIZZES = [
   {
     id: 'name-country',
     title: 'Name the Country',
-    description: 'Identify the highlighted country',
-    icon: '🌍',
-    href: '/play/name',
-    available: false,
+    description: 'Type every country you know — timed',
+    icon: '⌨️',
+    href: '/play/typing',
+    available: true,
     accent: '#007AFF',
   },
   {

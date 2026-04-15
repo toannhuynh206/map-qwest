@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   ComposableMap,
   Geographies,
@@ -17,14 +17,82 @@ import { useMapTheme } from '@/context/map-theme-context';
 const WORLD_TOPO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
 
 const MARKER_FILL: Record<CountryFeedback, string> = {
-  none: '#AFAFAF',
-  selected: '#89E219',
-  correct: '#58CC02',
-  incorrect: '#FF4B4B',
-  reveal: '#58CC02',
-  'correct-locked': '#16a34a',
-  'incorrect-locked': '#dc2626',
+  none:               '#AFAFAF',
+  selected:           '#89E219',
+  correct:            '#58CC02',
+  incorrect:          '#FF4B4B',
+  reveal:             '#58CC02',
+  'correct-locked':   '#86efac',
+  'incorrect-locked': '#fca5a5',
+  missed:             '#9CA3AF',
 };
+
+const TAP_THRESHOLD = 10;
+
+interface MarkerPinProps {
+  alpha3: string;
+  coords: { lat: number; lng: number };
+  fill: string;
+  isAnswered: boolean;
+  disabled: boolean;
+  zoom: number;
+  onSelect: (alpha3: string) => void;
+}
+
+function MarkerPin({ alpha3, coords, fill, isAnswered, disabled, zoom, onSelect }: MarkerPinProps) {
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const pinSize = 6 / zoom;
+  const outerSize = pinSize + 4 / zoom;
+  const sw = 1 / zoom;
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStart.current = { x: t.clientX, y: t.clientY };
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (disabled || !touchStart.current) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStart.current.x;
+    const dy = t.clientY - touchStart.current.y;
+    if (Math.sqrt(dx * dx + dy * dy) < TAP_THRESHOLD) {
+      e.preventDefault();
+      onSelect(alpha3);
+    }
+    touchStart.current = null;
+  };
+
+  return (
+    <Marker
+      coordinates={[coords.lng, coords.lat]}
+      onClick={() => { if (!disabled) onSelect(alpha3); }}
+    >
+      <circle
+        r={outerSize}
+        fill="none"
+        stroke={isAnswered ? fill : '#58CC02'}
+        strokeWidth={sw}
+        strokeDasharray={isAnswered ? 'none' : `${1.2 / zoom} ${1.2 / zoom}`}
+        opacity={0.7}
+        style={{ transition: 'stroke 200ms ease' }}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      />
+      <circle
+        r={pinSize}
+        fill={fill}
+        stroke="#FFFFFF"
+        strokeWidth={sw}
+        style={{
+          cursor: disabled ? 'default' : 'pointer',
+          transition: 'fill 200ms ease',
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      />
+    </Marker>
+  );
+}
 
 interface InteractiveMapProps {
   onCountrySelect: (alpha3: string) => void;
@@ -48,7 +116,7 @@ export function InteractiveMap({
   const { colors } = useMapTheme();
 
   const handleZoomIn = useCallback(() => {
-    setZoom((z) => Math.min(z * 1.5, 8));
+    setZoom((z) => Math.min(z * 1.5, 20));
   }, []);
 
   const handleZoomOut = useCallback(() => {
@@ -82,7 +150,7 @@ export function InteractiveMap({
   return (
     <div
       className="relative w-full h-full map-container overflow-hidden"
-      style={{ background: colors.ocean }}
+      style={{ background: colors.ocean, touchAction: 'none' }}
     >
       <ComposableMap
         projection="geoNaturalEarth1"
@@ -92,24 +160,14 @@ export function InteractiveMap({
         className="w-full h-full"
         style={{ width: '100%', height: '100%' }}
       >
-        <defs>
-          <pattern id="pattern-correct-locked" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
-            <rect width="6" height="6" fill="#dcfce7" />
-            <line x1="0" y1="0" x2="0" y2="6" stroke="#16a34a" strokeWidth="3" />
-          </pattern>
-          <pattern id="pattern-incorrect-locked" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
-            <rect width="6" height="6" fill="#fee2e2" />
-            <line x1="0" y1="0" x2="0" y2="6" stroke="#dc2626" strokeWidth="3" />
-          </pattern>
-        </defs>
-        <ZoomableGroup
+<ZoomableGroup
           zoom={zoom}
           center={center}
           onMoveEnd={handleMoveEnd}
           minZoom={1}
-          maxZoom={8}
+          maxZoom={20}
         >
-          {/* Country polygons */}
+          {/* Country polygons — no key reset, stays mounted for smooth transitions */}
           <Geographies geography={WORLD_TOPO_URL}>
             {({ geographies }) =>
               geographies.map((geo) => {
@@ -142,38 +200,18 @@ export function InteractiveMap({
             const feedback = feedbackMap[alpha3] || 'none';
             const fill = MARKER_FILL[feedback];
             const isAnswered = feedback === 'correct' || feedback === 'incorrect' || feedback === 'reveal' || feedback === 'correct-locked' || feedback === 'incorrect-locked';
-            const pinSize = 2.5 / zoom;
-            const outerSize = pinSize + 1.5 / zoom;
-            const sw = 0.6 / zoom;
 
             return (
-              <Marker
+              <MarkerPin
                 key={alpha3}
-                coordinates={[coords.lng, coords.lat]}
-                onClick={() => {
-                  if (!disabled) handleCountrySelect(alpha3);
-                }}
-              >
-                <circle
-                  r={outerSize}
-                  fill="none"
-                  stroke={isAnswered ? fill : '#58CC02'}
-                  strokeWidth={sw}
-                  strokeDasharray={isAnswered ? 'none' : `${1.2 / zoom} ${1.2 / zoom}`}
-                  opacity={0.7}
-                  style={{ transition: 'stroke 200ms ease' }}
-                />
-                <circle
-                  r={pinSize}
-                  fill={fill}
-                  stroke="#FFFFFF"
-                  strokeWidth={sw}
-                  style={{
-                    cursor: disabled ? 'default' : 'pointer',
-                    transition: 'fill 200ms ease',
-                  }}
-                />
-              </Marker>
+                alpha3={alpha3}
+                coords={coords}
+                fill={fill}
+                isAnswered={isAnswered}
+                disabled={disabled}
+                zoom={zoom}
+                onSelect={handleCountrySelect}
+              />
             );
           })}
         </ZoomableGroup>
