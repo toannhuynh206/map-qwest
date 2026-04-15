@@ -256,8 +256,25 @@ export function getCountryByNumeric(numeric: string): CountryInfo | undefined {
   return entries.find((c) => c.numeric === numeric);
 }
 
+// Countries that straddle two regions — included in both region lists.
+// primary `region` field stays unchanged (used for map coloring etc).
+const CROSS_REGION: Record<string, Region[]> = {
+  TUR: ['europe', 'asia'],   // Thrace (Europe) + Anatolia (Asia)
+  CYP: ['europe', 'asia'],   // EU member, geographically Asia
+  KAZ: ['europe', 'asia'],   // small part west of Ural in Europe
+  ARM: ['europe', 'asia'],   // South Caucasus
+  AZE: ['europe', 'asia'],   // South Caucasus
+  GEO: ['europe', 'asia'],   // South Caucasus
+  RUS: ['europe', 'asia'],   // spans both continents
+};
+
 export function getCountriesByRegion(region: Region): CountryInfo[] {
-  return Object.values(COUNTRIES).filter((c) => c.region === region);
+  const primary = Object.values(COUNTRIES).filter((c) => c.region === region);
+  const cross = Object.entries(CROSS_REGION)
+    .filter(([, regions]) => regions.includes(region))
+    .map(([alpha3]) => COUNTRIES[alpha3])
+    .filter((c): c is CountryInfo => !!c && c.region !== region);
+  return [...primary, ...cross];
 }
 
 export function getCountriesByDifficulty(difficulty: number): CountryInfo[] {

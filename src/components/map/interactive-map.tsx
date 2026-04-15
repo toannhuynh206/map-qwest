@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   ComposableMap,
   Geographies,
   ZoomableGroup,
   Marker,
 } from 'react-simple-maps';
+import { geoCentroid } from 'd3-geo';
 import { CountryPath, type CountryFeedback } from './country-path';
 import { MiniMap } from './mini-map';
 import { numericToAlpha3 } from '@/data/country-code-mapping';
@@ -94,6 +95,37 @@ function MarkerPin({ alpha3, coords, fill, isAnswered, disabled, zoom, onSelect 
   );
 }
 
+// Flag sticker shown on correctly-answered countries (alpha3 → alpha2)
+interface StickerMarkerProps {
+  alpha2: string;
+  coords: [number, number];
+  zoom: number;
+}
+
+function StickerMarker({ alpha2, coords, zoom }: StickerMarkerProps) {
+  const w = 24 / zoom;
+  const h = w * (2 / 3);
+  const pad = 1.5 / zoom;
+  const rx = 2 / zoom;
+  return (
+    <Marker coordinates={coords}>
+      <rect
+        x={-(w / 2 + pad)} y={-(h / 2 + pad)}
+        width={w + pad * 2} height={h + pad * 2}
+        fill="white"
+        rx={rx}
+        style={{ filter: `drop-shadow(0 ${1 / zoom}px ${2 / zoom}px rgba(0,0,0,0.35))` }}
+      />
+      <image
+        href={`https://flagcdn.com/w80/${alpha2.toLowerCase()}.png`}
+        x={-w / 2} y={-h / 2}
+        width={w} height={h}
+        style={{ borderRadius: `${rx}px` }}
+      />
+    </Marker>
+  );
+}
+
 interface InteractiveMapProps {
   onCountrySelect: (alpha3: string) => void;
   feedbackMap: Record<string, CountryFeedback>;
@@ -101,6 +133,8 @@ interface InteractiveMapProps {
   disabled: boolean;
   initialCenter?: [number, number];
   initialZoom?: number;
+  /** alpha3 → alpha2: render a flag sticker at each keyed country's centroid */
+  stickers?: Record<string, string>;
 }
 
 export function InteractiveMap({
@@ -110,10 +144,29 @@ export function InteractiveMap({
   disabled,
   initialCenter = [0, 10],
   initialZoom = 1,
+  stickers,
 }: InteractiveMapProps) {
   const [zoom, setZoom] = useState(initialZoom);
   const [center, setCenter] = useState<[number, number]>(initialCenter);
   const { colors } = useMapTheme();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Prevent double-tap zoom (D3 zoom intercepts touch events)
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    let lastTouch = 0;
+    const preventDoubleTap = (e: TouchEvent) => {
+      const now = Date.now();
+      if (e.touches.length === 1 && now - lastTouch < 350) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      }
+      lastTouch = now;
+    };
+    el.addEventListener('touchstart', preventDoubleTap, { passive: false, capture: true });
+    return () => el.removeEventListener('touchstart', preventDoubleTap, { capture: true });
+  }, []);
 
   const handleZoomIn = useCallback(() => {
     setZoom((z) => Math.min(z * 1.5, 20));
@@ -149,6 +202,7 @@ export function InteractiveMap({
 
   return (
     <div
+      ref={containerRef}
       className="relative w-full h-full map-container overflow-hidden"
       style={{ background: colors.ocean, touchAction: 'none' }}
     >
@@ -169,8 +223,8 @@ export function InteractiveMap({
         >
           {/* Country polygons — no key reset, stays mounted for smooth transitions */}
           <Geographies geography={WORLD_TOPO_URL}>
-            {({ geographies }) =>
-              geographies.map((geo) => {
+            {({ geographies }) => {
+              const paths = geographies.map((geo) => {
                 const numericId = geo.id || geo.properties?.iso_n3;
                 const alpha3 = numericToAlpha3(String(numericId));
                 if (!alpha3) return null;
@@ -191,8 +245,28 @@ export function InteractiveMap({
                     onSelect={handleCountrySelect}
                   />
                 );
-              })
-            }
+              });
+
+              // Flag stickers for countries in the TopoJSON (rendered on top)
+              const stickerPins = stickers
+                ? geographies.flatMap((geo) => {
+                    const numericId = geo.id || geo.properties?.iso_n3;
+                    const alpha3 = numericToAlpha3(String(numericId));
+                    if (!alpha3 || !stickers[alpha3]) return [];
+                    const [lng, lat] = geoCentroid(geo);
+                    return [
+                      <StickerMarker
+                        key={`sticker-${alpha3}`}
+                        alpha2={stickers[alpha3]}
+                        coords={[lng, lat]}
+                        zoom={zoom}
+                      />,
+                    ];
+                  })
+                : [];
+
+              return [...paths, ...stickerPins];
+            }}
           </Geographies>
 
           {/* Marker pins for small countries not in TopoJSON */}
@@ -214,6 +288,19 @@ export function InteractiveMap({
               />
             );
           })}
+
+          {/* Flag stickers for small countries */}
+          {stickers &&
+            Object.entries(SMALL_COUNTRY_COORDS)
+              .filter(([alpha3]) => stickers[alpha3])
+              .map(([alpha3, coords]) => (
+                <StickerMarker
+                  key={`sticker-small-${alpha3}`}
+                  alpha2={stickers[alpha3]}
+                  coords={[coords.lng, coords.lat]}
+                  zoom={zoom}
+                />
+              ))}
         </ZoomableGroup>
       </ComposableMap>
 

@@ -42,13 +42,23 @@ const TIMER_OPTIONS: { value: TimerOption; label: string }[] = [
 
 const THEMES: MapTheme[] = ['classic', 'political', 'colorful', 'terrain'];
 
+const WORLD_PREVIEW_BLOBS = [
+  { region: 'africa',        style: { top: '50%', left: '45%', width: '20%', height: '40%' } },
+  { region: 'europe',        style: { top: '15%', left: '45%', width: '22%', height: '35%' } },
+  { region: 'asia',          style: { top: '15%', left: '65%', width: '25%', height: '50%' } },
+  { region: 'north_america', style: { top: '15%', left: '5%',  width: '22%', height: '45%' } },
+  { region: 'south_america', style: { top: '55%', left: '15%', width: '15%', height: '35%' } },
+  { region: 'oceania',       style: { top: '45%', left: '78%', width: '18%', height: '30%' } },
+];
+
 interface QuizConfigScreenProps {
   region: QuizRegion;
   onBack: () => void;
   onStart: (config: QuizConfig) => void;
+  gameTitle?: string;
 }
 
-export function QuizConfigScreen({ region, onBack, onStart }: QuizConfigScreenProps) {
+export function QuizConfigScreen({ region, onBack, onStart, gameTitle = 'Pin the Country' }: QuizConfigScreenProps) {
   const totalCount = getCountryCount(region);
 
   const ALL_QUESTION_OPTIONS: { value: QuestionCount; label: string }[] = [
@@ -88,7 +98,7 @@ export function QuizConfigScreen({ region, onBack, onStart }: QuizConfigScreenPr
           </button>
           <div>
             <h1 className="text-base font-extrabold text-board-text">{REGION_LABELS[region]}</h1>
-            <p className="text-xs text-board-muted">Pin the Country</p>
+            <p className="text-xs text-board-muted">{gameTitle}</p>
           </div>
         </div>
       </div>
@@ -176,42 +186,19 @@ export function QuizConfigScreen({ region, onBack, onStart }: QuizConfigScreenPr
                       selected ? 'border-board-green shadow-md' : 'border-board-border hover:border-board-muted'
                     }`}
                   >
-                    {/* Mini map preview */}
-                    <div
-                      className="relative h-14 w-full"
-                      style={{ background: colors.ocean }}
-                    >
-                      {/* Simplified land mass blobs */}
-                      <div
-                        className="absolute"
-                        style={{
-                          top: '18%', left: '12%',
-                          width: '35%', height: '55%',
-                          background: colors.getCountryFill('AFR', 'africa'),
-                          borderRadius: '30% 40% 50% 30% / 30% 30% 40% 40%',
-                          opacity: 0.95,
-                        }}
-                      />
-                      <div
-                        className="absolute"
-                        style={{
-                          top: '12%', left: '52%',
-                          width: '38%', height: '48%',
-                          background: colors.getCountryFill('EUR', 'europe'),
-                          borderRadius: '40% 30% 30% 40% / 40% 40% 30% 30%',
-                          opacity: 0.95,
-                        }}
-                      />
-                      <div
-                        className="absolute"
-                        style={{
-                          top: '50%', left: '55%',
-                          width: '25%', height: '30%',
-                          background: colors.getCountryFill('ASI', 'asia'),
-                          borderRadius: '30% 50% 40% 30% / 30% 30% 50% 50%',
-                          opacity: 0.9,
-                        }}
-                      />
+                    <div className="relative h-14 w-full" style={{ background: colors.ocean }}>
+                      {WORLD_PREVIEW_BLOBS.map(({ region, style }) => (
+                        <div
+                          key={region}
+                          className="absolute"
+                          style={{
+                            ...style,
+                            background: colors.getCountryFill('', region),
+                            borderRadius: '30% 40% 40% 30% / 35% 35% 40% 40%',
+                            opacity: 0.95,
+                          }}
+                        />
+                      ))}
                       {selected && (
                         <div className="absolute top-1.5 right-1.5 w-4 h-4 bg-board-green rounded-full flex items-center justify-center">
                           <svg width="9" height="9" viewBox="0 0 12 12" fill="white">
@@ -220,7 +207,6 @@ export function QuizConfigScreen({ region, onBack, onStart }: QuizConfigScreenPr
                         </div>
                       )}
                     </div>
-                    {/* Label */}
                     <div className={`px-2 py-1.5 text-center ${selected ? 'bg-green-50' : 'bg-board-card'}`}>
                       <div className="text-xs font-extrabold text-board-text">{meta.name}</div>
                       <div className="text-[10px] text-board-muted">{meta.description}</div>

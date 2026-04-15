@@ -39,14 +39,13 @@ const TIMER_OPTIONS: { label: string; value: number | null }[] = [
   { label: '15 min',   value: 900 },
 ];
 
-const REGION_OPTIONS: { label: string; value: QuizRegion; emoji: string }[] = [
-  { label: 'World',      value: 'world',        emoji: '🌍' },
-  { label: 'Africa',     value: 'africa',        emoji: '🌍' },
-  { label: 'Europe',     value: 'europe',        emoji: '🇪🇺' },
-  { label: 'Asia',       value: 'asia',          emoji: '🌏' },
-  { label: 'N. America', value: 'north_america', emoji: '🌎' },
-  { label: 'S. America', value: 'south_america', emoji: '🌎' },
-  { label: 'Oceania',    value: 'oceania',       emoji: '🌏' },
+const TYPING_REGIONS: { id: QuizRegion; name: string; emoji: string; accent: string; description: string }[] = [
+  { id: 'africa',        name: 'Africa',        emoji: '🌍', accent: '#FF9500', description: 'Sub-Saharan & North Africa' },
+  { id: 'europe',        name: 'Europe',        emoji: '🏛️', accent: '#007AFF', description: 'Western, Eastern & Northern' },
+  { id: 'asia',          name: 'Asia',          emoji: '🌏', accent: '#AF52DE', description: 'East, South & Southeast Asia' },
+  { id: 'north_america', name: 'North America', emoji: '🌎', accent: '#FF3B30', description: 'Caribbean & Central America' },
+  { id: 'south_america', name: 'South America', emoji: '🌎', accent: '#34C759', description: '12 sovereign nations' },
+  { id: 'oceania',       name: 'Oceania',       emoji: '🏝️', accent: '#32ADE6', description: 'Pacific Islands & Australasia' },
 ];
 
 const THEMES: MapTheme[] = ['classic', 'political', 'colorful', 'terrain'];
@@ -85,20 +84,18 @@ function getEntryName(code: string, mode: 'countries' | 'states'): string {
 }
 
 // ---------------------------------------------------------------------------
-// Config screen
+// Region select screen  (matches Pin the Country's RegionSelectScreen style)
 // ---------------------------------------------------------------------------
 
-function ConfigScreen({
+function RegionScreen({
   onBack,
-  onStart,
+  onSelect,
 }: {
   onBack: () => void;
-  onStart: (c: TypingConfig) => void;
+  onSelect: (mode: 'countries' | 'states', region: QuizRegion) => void;
 }) {
-  const [cfg, setCfg] = useState<TypingConfig>(DEFAULT_CONFIG);
-
-  const set = <K extends keyof TypingConfig>(key: K, val: TypingConfig[K]) =>
-    setCfg((prev) => ({ ...prev, [key]: val }));
+  const [mode, setMode] = useState<'countries' | 'states'>('countries');
+  const worldCount = buildPool('countries', 'world').pool.length;
 
   return (
     <div className="min-h-screen bg-board-bg flex flex-col">
@@ -115,60 +112,166 @@ function ConfigScreen({
           </button>
           <div>
             <h1 className="text-base font-extrabold text-board-text">Name the Country</h1>
-            <p className="text-xs text-board-muted">Type every country or state you can name</p>
+            <p className="text-xs text-board-muted">Choose what to practice</p>
           </div>
         </div>
       </div>
 
-      {/* Options */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-2xl mx-auto px-4 py-5 space-y-4">
+
+          {/* Mode toggle */}
+          <div className="flex gap-2">
+            {(['countries', 'states'] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-bold border transition-all ${
+                  mode === m
+                    ? 'bg-board-green text-white border-board-green-dark shadow-sm'
+                    : 'bg-board-card text-board-text border-board-border hover:bg-board-hover'
+                }`}
+              >
+                {m === 'countries' ? '🌍 Countries' : '🗺️ US States'}
+              </button>
+            ))}
+          </div>
+
+          {mode === 'countries' ? (
+            <>
+              {/* World — full-width featured card */}
+              <button
+                onClick={() => onSelect('countries', 'world')}
+                className="w-full bg-board-card border border-board-border rounded-2xl p-4 flex items-center gap-4 hover:bg-board-hover active:scale-[0.99] transition-all text-left shadow-sm"
+              >
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+                  style={{ background: 'linear-gradient(135deg, #58CC02 0%, #46A302 100%)' }}
+                >
+                  🌍
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-extrabold text-board-text text-base">World</div>
+                  <div className="text-xs text-board-muted">All {worldCount} countries</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-board-green bg-green-50 px-2 py-0.5 rounded-full">
+                    {worldCount}
+                  </span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#58CC02" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </button>
+
+              {/* Region grid */}
+              <div className="grid grid-cols-2 gap-3">
+                {TYPING_REGIONS.map((r) => {
+                  const count = buildPool('countries', r.id).pool.length;
+                  return (
+                    <button
+                      key={r.id}
+                      onClick={() => onSelect('countries', r.id)}
+                      className="bg-board-card border border-board-border rounded-2xl p-3 flex flex-col gap-2 hover:bg-board-hover active:scale-[0.98] transition-all text-left shadow-sm"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div
+                          className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
+                          style={{ background: `${r.accent}20` }}
+                        >
+                          {r.emoji}
+                        </div>
+                        <span
+                          className="text-xs font-bold px-2 py-0.5 rounded-full"
+                          style={{ background: `${r.accent}18`, color: r.accent }}
+                        >
+                          {count}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="font-extrabold text-board-text text-sm">{r.name}</div>
+                        <div className="text-[11px] text-board-muted leading-tight">{r.description}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            /* US States — single card */
+            <button
+              onClick={() => onSelect('states', 'world')}
+              className="w-full bg-board-card border border-board-border rounded-2xl p-4 flex items-center gap-4 hover:bg-board-hover active:scale-[0.99] transition-all text-left shadow-sm"
+            >
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+                style={{ background: 'linear-gradient(135deg, #007AFF 0%, #0056CC 100%)' }}
+              >
+                🗺️
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-extrabold text-board-text text-base">All 50 States</div>
+                <div className="text-xs text-board-muted">Name every US state</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-[#007AFF] bg-blue-50 px-2 py-0.5 rounded-full">50</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#007AFF" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </div>
+            </button>
+          )}
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Options screen  (timer + map style — shown after region is chosen)
+// ---------------------------------------------------------------------------
+
+function OptionsScreen({
+  config,
+  onBack,
+  onStart,
+}: {
+  config: TypingConfig;
+  onBack: () => void;
+  onStart: (c: TypingConfig) => void;
+}) {
+  const [timeLimit, setTimeLimit] = useState<number | null>(config.timeLimit);
+  const [theme, setTheme]         = useState<MapTheme>(config.theme);
+  const blobs = config.mode === 'states' ? US_PREVIEW_BLOBS : WORLD_PREVIEW_BLOBS;
+
+  const regionLabel =
+    config.mode === 'states'
+      ? 'US States'
+      : (TYPING_REGIONS.find((r) => r.id === config.region)?.name ?? 'World');
+
+  return (
+    <div className="min-h-screen bg-board-bg flex flex-col">
+      {/* Header */}
+      <div className="bg-board-card border-b border-board-border px-4 py-4">
+        <div className="max-w-2xl mx-auto flex items-center gap-3">
+          <button
+            onClick={onBack}
+            className="w-9 h-9 rounded-xl border border-board-border flex items-center justify-center text-board-muted hover:bg-board-hover transition-colors"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <div>
+            <h1 className="text-base font-extrabold text-board-text">{regionLabel}</h1>
+            <p className="text-xs text-board-muted">Name the Country</p>
+          </div>
+        </div>
+      </div>
+
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-2xl mx-auto px-4 py-5 space-y-6">
-
-          {/* Mode */}
-          <section>
-            <label className="text-xs font-bold text-board-muted uppercase tracking-wider mb-2 block">
-              Mode
-            </label>
-            <div className="flex gap-2">
-              {(['countries', 'states'] as const).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => set('mode', m)}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-bold border transition-all ${
-                    cfg.mode === m
-                      ? 'bg-board-green text-white border-board-green-dark shadow-sm'
-                      : 'bg-board-card text-board-text border-board-border hover:bg-board-hover'
-                  }`}
-                >
-                  {m === 'countries' ? '🌍 Countries' : '🗺️ US States'}
-                </button>
-              ))}
-            </div>
-          </section>
-
-          {/* Region (countries only) */}
-          {cfg.mode === 'countries' && (
-            <section>
-              <label className="text-xs font-bold text-board-muted uppercase tracking-wider mb-2 block">
-                Region
-              </label>
-              <div className="flex gap-2 flex-wrap">
-                {REGION_OPTIONS.map((o) => (
-                  <button
-                    key={o.value}
-                    onClick={() => set('region', o.value)}
-                    className={`px-3 py-2 rounded-xl text-sm font-bold border transition-all ${
-                      cfg.region === o.value
-                        ? 'bg-board-green text-white border-board-green-dark shadow-sm'
-                        : 'bg-board-card text-board-text border-board-border hover:bg-board-hover'
-                    }`}
-                  >
-                    {o.emoji} {o.label}
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
 
           {/* Timer */}
           <section>
@@ -179,9 +282,9 @@ function ConfigScreen({
               {TIMER_OPTIONS.map((o) => (
                 <button
                   key={String(o.value)}
-                  onClick={() => set('timeLimit', o.value)}
+                  onClick={() => setTimeLimit(o.value)}
                   className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${
-                    cfg.timeLimit === o.value
+                    timeLimit === o.value
                       ? 'bg-board-text text-white border-board-text shadow-sm'
                       : 'bg-board-card text-board-text border-board-border hover:bg-board-hover'
                   }`}
@@ -201,19 +304,18 @@ function ConfigScreen({
               {THEMES.map((t) => {
                 const colors   = THEME_COLORS[t];
                 const meta     = THEME_META[t];
-                const selected = cfg.theme === t;
-                const blobs    = cfg.mode === 'states' ? US_PREVIEW_BLOBS : WORLD_PREVIEW_BLOBS;
+                const selected = theme === t;
                 return (
                   <button
                     key={t}
-                    onClick={() => set('theme', t)}
+                    onClick={() => setTheme(t)}
                     className={`rounded-2xl overflow-hidden border-2 transition-all ${
                       selected ? 'border-board-green shadow-md' : 'border-board-border hover:border-board-muted'
                     }`}
                   >
                     <div className="relative h-14 w-full" style={{ background: colors.ocean }}>
                       {blobs.map(({ region, style }) => {
-                        const fill = cfg.mode === 'states'
+                        const fill = config.mode === 'states'
                           ? colors.getStateFill('', region)
                           : colors.getCountryFill('', region);
                         return (
@@ -254,7 +356,7 @@ function ConfigScreen({
       <div className="bg-board-card border-t border-board-border px-4 py-4">
         <div className="max-w-2xl mx-auto">
           <button
-            onClick={() => onStart(cfg)}
+            onClick={() => onStart({ ...config, timeLimit, theme })}
             className="w-full py-3.5 bg-board-green hover:bg-board-green-dark text-white font-extrabold text-base rounded-2xl shadow-md btn-chunky transition-colors active:scale-[0.99]"
           >
             Start →
@@ -354,31 +456,69 @@ function GameScreen({
   const found     = guessed.length;
   const isTimeLow = config.timeLimit !== null && remaining !== null && remaining < 60;
 
+  const timerFraction =
+    config.timeLimit && remaining !== null ? remaining / config.timeLimit : null;
+  const R    = 10;
+  const CIRC = 2 * Math.PI * R;
+
   return (
     <div className="h-dvh flex flex-col bg-board-bg overflow-hidden">
-      {/* Header */}
-      <div className="shrink-0 bg-board-card border-b border-board-border px-4 py-3">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="text-sm font-bold text-board-muted">
-              {config.mode === 'states' ? '🗺️' : '🌍'}
-            </span>
-            <span className="text-sm font-bold text-board-text">
-              {found}
-              <span className="text-board-muted">/{total}</span>
-            </span>
-          </div>
+      {/* Header — matches QuizHeader layout */}
+      <div className="w-full bg-board-card border-b border-board-border shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 max-w-4xl mx-auto">
 
-          <div className="flex items-center gap-3">
-            {config.timeLimit !== null && remaining !== null && (
-              <span
-                className="text-sm font-black tabular-nums"
-                style={{ color: isTimeLow ? '#FF4B4B' : undefined }}
-              >
+          {/* Give Up (✕) */}
+          <button
+            onClick={giveUp}
+            className="text-board-muted hover:text-board-text transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          {/* Timer ring — same SVG ring as QuizHeader, or spacer */}
+          {config.timeLimit !== null && remaining !== null ? (
+            <div className={`flex items-center gap-1.5 ${isTimeLow ? 'text-red-500' : 'text-board-muted'}`}>
+              <svg width="24" height="24" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r={R} fill="none" stroke="currentColor" strokeWidth={2} opacity={0.2} />
+                <circle
+                  cx="12" cy="12" r={R}
+                  fill="none" stroke="currentColor" strokeWidth={2}
+                  strokeDasharray={CIRC}
+                  strokeDashoffset={timerFraction !== null ? CIRC * (1 - timerFraction) : 0}
+                  strokeLinecap="round"
+                  transform="rotate(-90 12 12)"
+                  style={{ transition: 'stroke-dashoffset 0.5s linear' }}
+                />
+              </svg>
+              <span className="text-sm font-bold tabular-nums min-w-[3ch] text-center">
                 {formatTime(remaining)}
               </span>
-            )}
+            </div>
+          ) : (
+            <div className="w-14" />
+          )}
+
+          {/* Stats */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              <span className="w-5 h-5 rounded-full bg-board-green flex items-center justify-center text-white text-[10px] font-bold">✓</span>
+              <span className="text-sm font-bold text-board-green">{found}</span>
+            </div>
+            <div className="w-px h-4 bg-board-border" />
+            <span className="text-sm font-bold text-board-muted">{total - found} left</span>
           </div>
+        </div>
+
+        {/* Prompt row */}
+        <div className="px-4 pb-3 text-center">
+          <p className="text-lg font-extrabold text-board-text">
+            Name every{' '}
+            <span className="text-board-green">
+              {config.mode === 'states' ? 'US state' : 'country'}
+            </span>
+          </p>
         </div>
       </div>
 
@@ -408,9 +548,9 @@ function GameScreen({
         <GuessedList guessed={guessedChips} />
       </div>
 
-      {/* Input row */}
+      {/* Input row — full width, no Give Up (✕ handles it) */}
       <div className="shrink-0 bg-board-card border-t border-board-border px-4 py-3">
-        <div className="max-w-2xl mx-auto flex gap-2">
+        <div className="max-w-2xl mx-auto">
           <TypeInput
             ref={inputRef}
             onInput={handleInput}
@@ -418,12 +558,6 @@ function GameScreen({
             disabled={status !== 'playing'}
             placeholder={config.mode === 'states' ? 'Type a US state…' : 'Type a country…'}
           />
-          <button
-            onClick={giveUp}
-            className="shrink-0 px-4 py-2.5 rounded-2xl border border-board-border text-board-muted text-sm font-bold hover:bg-board-hover hover:text-board-text transition-colors"
-          >
-            Give Up
-          </button>
         </div>
       </div>
     </div>
@@ -551,16 +685,24 @@ function ResultsScreen({
 // Page — manages phase transitions
 // ---------------------------------------------------------------------------
 
-type Phase = 'config' | 'playing' | 'results';
+type Phase = 'region' | 'options' | 'playing' | 'results';
 
 export default function TypingPage() {
   const router = useRouter();
-  const [phase, setPhase]   = useState<Phase>('config');
+  const [phase, setPhase]   = useState<Phase>('region');
   const [config, setConfig] = useState<TypingConfig>(DEFAULT_CONFIG);
   const start = useTypingStore((s) => s.start);
   const reset = useTypingStore((s) => s.reset);
 
   const handleBack = useCallback(() => router.back(), [router]);
+
+  const handleRegionSelect = useCallback(
+    (mode: 'countries' | 'states', region: QuizRegion) => {
+      setConfig((prev) => ({ ...prev, mode, region }));
+      setPhase('options');
+    },
+    [],
+  );
 
   const handleStart = useCallback(
     (cfg: TypingConfig) => {
@@ -576,10 +718,11 @@ export default function TypingPage() {
 
   const handlePlayAgain = useCallback(() => {
     reset();
-    setPhase('config');
+    setPhase('region');
   }, [reset]);
 
-  if (phase === 'config')  return <ConfigScreen onBack={handleBack} onStart={handleStart} />;
+  if (phase === 'region')  return <RegionScreen onBack={handleBack} onSelect={handleRegionSelect} />;
+  if (phase === 'options') return <OptionsScreen config={config} onBack={() => setPhase('region')} onStart={handleStart} />;
   if (phase === 'playing') return <GameScreen config={config} onFinish={handleFinish} />;
   return <ResultsScreen config={config} onPlayAgain={handlePlayAgain} />;
 }

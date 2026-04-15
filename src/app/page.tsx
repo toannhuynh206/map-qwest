@@ -30,10 +30,10 @@ const QUIZZES = [
   {
     id: 'guess-flag',
     title: 'Guess the Flag',
-    description: 'Match flags to their countries',
-    icon: '🏴',
+    description: 'See the flag, tap the country',
+    icon: '🏳️',
     href: '/play/flags',
-    available: false,
+    available: true,
     accent: '#FF9500',
   },
   {

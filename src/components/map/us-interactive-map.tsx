@@ -132,6 +132,23 @@ export function USInteractiveMap({
     return () => observer.disconnect();
   }, []);
 
+  // Prevent double-tap zoom (D3 zoom intercepts touch events)
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    let lastTouch = 0;
+    const preventDoubleTap = (e: TouchEvent) => {
+      const now = Date.now();
+      if (e.touches.length === 1 && now - lastTouch < 350) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      }
+      lastTouch = now;
+    };
+    el.addEventListener('touchstart', preventDoubleTap, { passive: false, capture: true });
+    return () => el.removeEventListener('touchstart', preventDoubleTap, { capture: true });
+  }, []);
+
   const scale = Math.min(
     (dims.width  / NATURAL_W) * NATURAL_SCALE,
     (dims.height / NATURAL_H) * NATURAL_SCALE,

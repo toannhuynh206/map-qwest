@@ -34,9 +34,10 @@ const REGIONS = buildRegionList();
 
 interface RegionSelectScreenProps {
   onSelect: (region: QuizRegion) => void;
+  title?: string;
 }
 
-export function RegionSelectScreen({ onSelect }: RegionSelectScreenProps) {
+export function RegionSelectScreen({ onSelect, title = 'Pin the Country' }: RegionSelectScreenProps) {
   return (
     <div className="min-h-screen bg-board-bg flex flex-col">
       {/* Header */}
@@ -51,7 +52,7 @@ export function RegionSelectScreen({ onSelect }: RegionSelectScreenProps) {
             </svg>
           </Link>
           <div>
-            <h1 className="text-base font-extrabold text-board-text">Pin the Country</h1>
+            <h1 className="text-base font-extrabold text-board-text">{title}</h1>
             <p className="text-xs text-board-muted">Choose a region to practice</p>
           </div>
         </div>
