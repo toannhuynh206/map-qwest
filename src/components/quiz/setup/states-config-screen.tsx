@@ -1,16 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { THEME_COLORS, THEME_META } from '@/context/map-theme-context';
 import type { TimerOption, QuestionCount, MapTheme } from '@/types/quiz-config';
 
 const TOTAL_STATES = 50;
 
 const TIMER_OPTIONS: { value: TimerOption; label: string }[] = [
-  { value: 'off',   label: 'Off'   },
-  { value: '30s',   label: '30s'   },
-  { value: '1min',  label: '1 min' },
-  { value: '2min',  label: '2 min' },
+  { value: 'off',    label: 'Off'    },
+  { value: '30s',    label: '30s'    },
+  { value: '1min',   label: '1 min'  },
+  { value: '2min',   label: '2 min'  },
+  { value: 'custom', label: 'Custom' },
 ];
 
 const QUESTION_OPTIONS: { value: QuestionCount; label: string }[] = [
@@ -27,6 +28,7 @@ const US_PREVIEW_REGIONS = ['west', 'midwest', 'southeast', 'northeast', 'southw
 export interface StatesQuizConfig {
   questionCount: QuestionCount;
   timer: TimerOption;
+  customTimerSeconds?: number;
   theme: MapTheme;
   persistFeedback: boolean;
 }
@@ -37,10 +39,12 @@ interface StatesConfigScreenProps {
 }
 
 export function StatesConfigScreen({ onBack, onStart }: StatesConfigScreenProps) {
-  const [questionCount,   setQuestionCount]   = useState<QuestionCount>(10);
-  const [timer,           setTimer]           = useState<TimerOption>('off');
-  const [theme,           setTheme]           = useState<MapTheme>('classic');
-  const [persistFeedback, setPersistFeedback] = useState(false);
+  const [questionCount,    setQuestionCount]    = useState<QuestionCount>(10);
+  const [timer,            setTimer]            = useState<TimerOption>('off');
+  const [customTimerSecs,  setCustomTimerSecs]  = useState(45);
+  const [theme,            setTheme]            = useState<MapTheme>('classic');
+  const [persistFeedback,  setPersistFeedback]  = useState(false);
+  const customInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <div className="min-h-screen bg-board-bg flex flex-col">
@@ -97,7 +101,7 @@ export function StatesConfigScreen({ onBack, onStart }: StatesConfigScreenProps)
               {TIMER_OPTIONS.map((o) => (
                 <button
                   key={o.value}
-                  onClick={() => setTimer(o.value)}
+                  onClick={() => { setTimer(o.value); if (o.value === 'custom') setTimeout(() => customInputRef.current?.focus(), 50); }}
                   className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${
                     timer === o.value
                       ? 'bg-board-text text-white border-board-text shadow-sm'
@@ -108,6 +112,21 @@ export function StatesConfigScreen({ onBack, onStart }: StatesConfigScreenProps)
                 </button>
               ))}
             </div>
+            {timer === 'custom' && (
+              <div className="mt-3 flex items-center gap-3 bg-board-card border border-board-border rounded-2xl px-4 py-3">
+                <span className="text-sm text-board-muted shrink-0">Seconds per question</span>
+                <input
+                  ref={customInputRef}
+                  type="number"
+                  min={5}
+                  max={300}
+                  value={customTimerSecs}
+                  onChange={(e) => setCustomTimerSecs(Math.max(5, Math.min(300, Number(e.target.value) || 5)))}
+                  className="w-20 text-center text-base font-bold bg-board-bg border border-board-border rounded-xl px-2 py-1.5 text-board-text focus:outline-none focus:border-board-green transition-colors"
+                />
+                <span className="text-sm font-bold text-board-text shrink-0">sec</span>
+              </div>
+            )}
           </section>
 
           {/* Persist feedback */}
@@ -197,7 +216,7 @@ export function StatesConfigScreen({ onBack, onStart }: StatesConfigScreenProps)
       <div className="bg-board-card border-t border-board-border px-4 py-4">
         <div className="max-w-2xl mx-auto">
           <button
-            onClick={() => onStart({ questionCount, timer, theme, persistFeedback })}
+            onClick={() => onStart({ questionCount, timer, customTimerSeconds: timer === 'custom' ? customTimerSecs : undefined, theme, persistFeedback })}
             className="w-full py-3.5 bg-board-green hover:bg-board-green-dark text-white font-extrabold text-base rounded-2xl shadow-md btn-chunky transition-colors active:scale-[0.99]"
           >
             Start Quiz →

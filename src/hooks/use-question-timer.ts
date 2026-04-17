@@ -3,6 +3,8 @@ import { TIMER_SECONDS, type TimerOption } from '@/types/quiz-config';
 
 interface UseQuestionTimerOptions {
   timer: TimerOption;
+  /** Seconds to use when timer === 'custom' */
+  customTimerSeconds?: number;
   isActive: boolean;
   /** Changes on every new question to reset the clock */
   questionKey: string;
@@ -18,11 +20,15 @@ export interface QuestionTimerResult {
 
 export function useQuestionTimer({
   timer,
+  customTimerSeconds,
   isActive,
   questionKey,
   onExpire,
 }: UseQuestionTimerOptions): QuestionTimerResult {
-  const totalSeconds = TIMER_SECONDS[timer];
+  const totalSeconds =
+    timer === 'custom'
+      ? (customTimerSeconds && customTimerSeconds > 0 ? customTimerSeconds : null)
+      : TIMER_SECONDS[timer];
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(totalSeconds);
   const onExpireRef = useRef(onExpire);
   const expiredRef = useRef(false);

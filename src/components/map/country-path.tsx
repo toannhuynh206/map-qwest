@@ -57,12 +57,14 @@ function CountryPathComponent({
   const strokeColor = feedback !== 'none' ? STROKE_COLOR : colors.countryStroke;
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (!e.touches.length) return;
     const t = e.touches[0];
     touchStart.current = { x: t.clientX, y: t.clientY };
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (!isClickable || !touchStart.current) return;
+    if (!e.changedTouches.length) return;
     const t = e.changedTouches[0];
     const dx = t.clientX - touchStart.current.x;
     const dy = t.clientY - touchStart.current.y;

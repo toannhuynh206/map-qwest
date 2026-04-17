@@ -1,5 +1,7 @@
 /**
  * Alternative / common names for countries, mapped to their alpha3 codes.
+ * These are accepted in BOTH normal and expert mode — they are genuine
+ * alternate names or well-known abbreviations, not lazy truncations.
  * Keys are written in natural form — the matching engine normalises both
  * the key and the player's input before comparing, so diacritics, case,
  * and apostrophes don't matter.
@@ -82,9 +84,6 @@ export const COUNTRY_ALIASES: Record<string, string> = {
   // Brunei
   'brunei':                        'BRN',
 
-  // Bosnia
-  'bosnia':                        'BIH',
-
   // Moldova
   'moldova':                       'MDA',
 
@@ -102,9 +101,6 @@ export const COUNTRY_ALIASES: Record<string, string> = {
 
   // Venezuela
   'venezuela':                     'VEN',
-
-  // Trinidad & Tobago
-  'trinidad':                      'TTO',
 
   // Micronesia
   'micronesia':                    'FSM',
@@ -133,10 +129,6 @@ export const COUNTRY_ALIASES: Record<string, string> = {
   // Philippines
   'philippines':                   'PHL',
 
-  // São Tomé and Príncipe
-  'sao tome':                      'STP',
-  'sao tome and principe':         'STP',
-
   // Equatorial Guinea
   'equatorial guinea':             'GNQ',
 
@@ -144,26 +136,9 @@ export const COUNTRY_ALIASES: Record<string, string> = {
   'dominican republic':            'DOM',
   'dominicana':                    'DOM',
 
-  // Solomon Islands
-  'solomons':                      'SLB',
-
-  // Marshall Islands
-  'marshalls':                     'MHL',
-
-  // Saint Kitts and Nevis
-  'saint kitts':                   'KNA',
-  'st kitts':                      'KNA',
-
-  // Saint Vincent and the Grenadines
-  'saint vincent':                 'VCT',
-  'st vincent':                    'VCT',
-
-  // Saint Lucia
+  // Saint Lucia (canonical name IS Saint Lucia — "st lucia" is just the abbreviated form)
   'saint lucia':                   'LCA',
   'st lucia':                      'LCA',
-
-  // Antigua and Barbuda
-  'antigua':                       'ATG',
 
   // Federated States of Micronesia
   'federated states of micronesia': 'FSM',
@@ -180,6 +155,50 @@ export const COUNTRY_ALIASES: Record<string, string> = {
   // Saudi Arabia
   'saudi arabia':                  'SAU',
   'ksa':                           'SAU',
+};
+
+/**
+ * Normal-mode-only shortcuts: first-word (or common partial) forms of
+ * compound country names.  Expert mode requires the full canonical name.
+ * Example: "Antigua" is accepted in normal but not expert
+ *          (full name: "Antigua and Barbuda").
+ */
+export const NORMAL_MODE_ALIASES: Record<string, string> = {
+  // Antigua and Barbuda
+  'antigua':           'ATG',
+
+  // Trinidad and Tobago
+  'trinidad':          'TTO',
+  'tobago':            'TTO',
+
+  // Sao Tome and Principe
+  'sao tome':          'STP',
+
+  // Bosnia and Herzegovina
+  'bosnia':            'BIH',
+  'herzegovina':       'BIH',
+
+  // Saint Kitts and Nevis
+  'saint kitts':       'KNA',
+  'st kitts':          'KNA',
+  'nevis':             'KNA',
+
+  // Saint Vincent and the Grenadines
+  'saint vincent':     'VCT',
+  'st vincent':        'VCT',
+  'grenadines':        'VCT',
+
+  // Solomon Islands
+  'solomon':           'SLB',
+  'solomons':          'SLB',
+
+  // Marshall Islands
+  'marshall':          'MHL',
+  'marshalls':         'MHL',
+
+  // Papua New Guinea
+  'papua':             'PNG',
+  'new guinea':        'PNG',
 };
 
 /**

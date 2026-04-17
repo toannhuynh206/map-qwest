@@ -46,13 +46,22 @@ const QUIZZES = [
     accent: '#007AFF',
   },
   {
+    id: 'geography-quiz',
+    title: 'Geography Quiz',
+    description: 'Flags, capitals, shapes & trivia — mixed',
+    icon: '🧠',
+    href: '/play/mixed',
+    available: true,
+    accent: '#AF52DE',
+  },
+  {
     id: 'puzzle',
     title: 'Daily Puzzle',
     description: '3 curated questions, one shot',
     icon: '🧩',
     href: '/play/puzzle',
     available: false,
-    accent: '#AF52DE',
+    accent: '#FF9500',
   },
 ] as const;
 

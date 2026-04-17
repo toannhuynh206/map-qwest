@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
+import { useState, useRef, useMemo, useEffect, useCallback, memo } from 'react';
 import { useRouter } from 'next/navigation';
 import { MapThemeContext, THEME_COLORS, THEME_META } from '@/context/map-theme-context';
 import { InteractiveMap } from '@/components/map/interactive-map';
@@ -13,6 +13,8 @@ import { US_STATES } from '@/data/us-states';
 import { COUNTRIES } from '@/data/countries';
 import type { MapTheme, QuizRegion } from '@/types/quiz-config';
 import type { CountryFeedback } from '@/components/map/country-path';
+import { getScoreTier, getEndMessage } from '@/data/end-messages';
+import { getRandomFunFact, regionToFactCategory } from '@/data/fun-facts';
 
 // ---------------------------------------------------------------------------
 // Types & constants
@@ -23,6 +25,7 @@ interface TypingConfig {
   region: QuizRegion;
   timeLimit: number | null; // seconds; null = no limit
   theme: MapTheme;
+  difficulty: 'normal' | 'expert';
 }
 
 const DEFAULT_CONFIG: TypingConfig = {
@@ -30,9 +33,10 @@ const DEFAULT_CONFIG: TypingConfig = {
   region: 'world',
   timeLimit: null,
   theme: 'classic',
+  difficulty: 'normal',
 };
 
-const TIMER_OPTIONS: { label: string; value: number | null }[] = [
+const PRESET_TIMER_OPTIONS: { label: string; value: number | null }[] = [
   { label: 'No limit', value: null },
   { label: '5 min',    value: 300 },
   { label: '10 min',   value: 600 },
@@ -241,8 +245,12 @@ function OptionsScreen({
   onBack: () => void;
   onStart: (c: TypingConfig) => void;
 }) {
-  const [timeLimit, setTimeLimit] = useState<number | null>(config.timeLimit);
-  const [theme, setTheme]         = useState<MapTheme>(config.theme);
+  const [timeLimit,      setTimeLimit]      = useState<number | null>(config.timeLimit);
+  const [customMinutes,  setCustomMinutes]  = useState(7);
+  const [isCustomTimer,  setIsCustomTimer]  = useState(false);
+  const [theme,          setTheme]          = useState<MapTheme>(config.theme);
+  const [difficulty,     setDifficulty]     = useState<'normal' | 'expert'>(config.difficulty);
+  const customTimerRef = useRef<HTMLInputElement>(null);
   const blobs = config.mode === 'states' ? US_PREVIEW_BLOBS : WORLD_PREVIEW_BLOBS;
 
   const regionLabel =
@@ -273,18 +281,70 @@ function OptionsScreen({
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-2xl mx-auto px-4 py-5 space-y-6">
 
+          {/* Difficulty */}
+          <section>
+            <label className="text-xs font-bold text-board-muted uppercase tracking-wider mb-2 block">
+              Difficulty
+            </label>
+            <div className="space-y-2">
+              {([
+                {
+                  id: 'normal' as const,
+                  icon: '😊',
+                  title: 'Normal',
+                  description: config.mode === 'states'
+                    ? 'Abbreviations accepted — "NY" counts for New York'
+                    : 'Partial names accepted — "Antigua" counts for "Antigua and Barbuda"',
+                },
+                {
+                  id: 'expert' as const,
+                  icon: '🎓',
+                  title: 'Expert',
+                  description: config.mode === 'states'
+                    ? 'Full state name required — must type New York'
+                    : 'Full official name required — must type "Antigua and Barbuda"',
+                },
+              ] as const).map((d) => (
+                <button
+                  key={d.id}
+                  onClick={() => setDifficulty(d.id)}
+                  className={`w-full flex items-center gap-3 p-3.5 rounded-2xl border-2 transition-all text-left ${
+                    difficulty === d.id
+                      ? 'border-board-green bg-board-green/5 shadow-sm'
+                      : 'border-board-border bg-board-card hover:bg-board-hover'
+                  }`}
+                >
+                  <span className="text-2xl w-9 shrink-0 text-center">{d.icon}</span>
+                  <div>
+                    <p className={`text-sm font-extrabold ${difficulty === d.id ? 'text-board-green' : 'text-board-text'}`}>
+                      {d.title}
+                    </p>
+                    <p className="text-xs text-board-muted">{d.description}</p>
+                  </div>
+                  {difficulty === d.id && (
+                    <div className="ml-auto w-5 h-5 bg-board-green rounded-full flex items-center justify-center shrink-0">
+                      <svg width="10" height="10" viewBox="0 0 12 12" fill="white">
+                        <path d="M2 6l3 3 5-5" stroke="white" strokeWidth={1.5} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </section>
+
           {/* Timer */}
           <section>
             <label className="text-xs font-bold text-board-muted uppercase tracking-wider mb-2 block">
               Time Limit
             </label>
             <div className="flex gap-2 flex-wrap">
-              {TIMER_OPTIONS.map((o) => (
+              {PRESET_TIMER_OPTIONS.map((o) => (
                 <button
                   key={String(o.value)}
-                  onClick={() => setTimeLimit(o.value)}
+                  onClick={() => { setTimeLimit(o.value); setIsCustomTimer(false); }}
                   className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${
-                    timeLimit === o.value
+                    !isCustomTimer && timeLimit === o.value
                       ? 'bg-board-text text-white border-board-text shadow-sm'
                       : 'bg-board-card text-board-text border-board-border hover:bg-board-hover'
                   }`}
@@ -292,7 +352,36 @@ function OptionsScreen({
                   {o.label}
                 </button>
               ))}
+              <button
+                onClick={() => { setIsCustomTimer(true); setTimeLimit(customMinutes * 60); setTimeout(() => customTimerRef.current?.focus(), 50); }}
+                className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${
+                  isCustomTimer
+                    ? 'bg-board-text text-white border-board-text shadow-sm'
+                    : 'bg-board-card text-board-text border-board-border hover:bg-board-hover'
+                }`}
+              >
+                Custom
+              </button>
             </div>
+            {isCustomTimer && (
+              <div className="mt-3 flex items-center gap-3 bg-board-card border border-board-border rounded-2xl px-4 py-3">
+                <span className="text-sm text-board-muted shrink-0">Total time</span>
+                <input
+                  ref={customTimerRef}
+                  type="number"
+                  min={1}
+                  max={120}
+                  value={customMinutes}
+                  onChange={(e) => {
+                    const v = Math.max(1, Math.min(120, Number(e.target.value) || 1));
+                    setCustomMinutes(v);
+                    setTimeLimit(v * 60);
+                  }}
+                  className="w-20 text-center text-base font-bold bg-board-bg border border-board-border rounded-xl px-2 py-1.5 text-board-text focus:outline-none focus:border-board-green transition-colors"
+                />
+                <span className="text-sm font-bold text-board-text shrink-0">min</span>
+              </div>
+            )}
           </section>
 
           {/* Map style */}
@@ -356,7 +445,7 @@ function OptionsScreen({
       <div className="bg-board-card border-t border-board-border px-4 py-4">
         <div className="max-w-2xl mx-auto">
           <button
-            onClick={() => onStart({ ...config, timeLimit, theme })}
+            onClick={() => onStart({ ...config, timeLimit, theme, difficulty })}
             className="w-full py-3.5 bg-board-green hover:bg-board-green-dark text-white font-extrabold text-base rounded-2xl shadow-md btn-chunky transition-colors active:scale-[0.99]"
           >
             Start →
@@ -391,8 +480,8 @@ function GameScreen({
   const [remaining, setRemaining] = useState<number | null>(config.timeLimit);
 
   const { lookup } = useMemo(
-    () => buildPool(config.mode, config.region),
-    [config.mode, config.region],
+    () => buildPool(config.mode, config.region, config.difficulty),
+    [config.mode, config.region, config.difficulty],
   );
 
   const guessedSet = useMemo(() => new Set(guessed), [guessed]);
@@ -587,18 +676,15 @@ function ResultsScreen({
   const pct     = total > 0 ? Math.round((found / total) * 100) : 0;
   const elapsed = finishedAt && startedAt ? Math.floor((finishedAt - startedAt) / 1000) : 0;
 
-  const headline =
-    pct === 100 ? '🎉 Perfect score!' :
-    pct >= 80   ? '🌟 Great job!'     :
-    pct >= 50   ? '👏 Good effort!'   :
-                  '📚 Keep learning!';
+  const endMessage = useMemo(() => getEndMessage(getScoreTier(found, total)), [found, total]);
+  const funFact    = useMemo(() => getRandomFunFact(regionToFactCategory(config.mode, config.region)), [config.mode, config.region]);
 
   return (
     <div className="min-h-screen bg-board-bg flex flex-col">
       {/* Header */}
       <div className="bg-board-card border-b border-board-border px-4 py-4">
         <div className="max-w-2xl mx-auto">
-          <h1 className="text-base font-extrabold text-board-text">{headline}</h1>
+          <h1 className="text-base font-extrabold text-board-text">{endMessage}</h1>
           <p className="text-xs text-board-muted">
             {config.mode === 'states' ? 'US States' : 'Countries'} · {formatTime(elapsed)}
           </p>
@@ -623,6 +709,15 @@ function ResultsScreen({
             <p className="text-xs text-board-muted mt-2">
               {pct}% found · {missed} missed
             </p>
+          </div>
+
+          {/* Fun fact */}
+          <div className="bg-board-card border border-board-border rounded-2xl px-4 py-3 flex gap-3 items-start">
+            <span className="text-xl shrink-0">🌍</span>
+            <div>
+              <p className="text-[10px] font-bold text-board-green uppercase tracking-wider mb-0.5">Did you know?</p>
+              <p className="text-sm text-board-text leading-snug">{funFact}</p>
+            </div>
           </div>
 
           {/* Missed list */}
@@ -694,7 +789,7 @@ export default function TypingPage() {
   const start = useTypingStore((s) => s.start);
   const reset = useTypingStore((s) => s.reset);
 
-  const handleBack = useCallback(() => router.back(), [router]);
+  const handleBack = useCallback(() => { reset(); router.back(); }, [reset, router]);
 
   const handleRegionSelect = useCallback(
     (mode: 'countries' | 'states', region: QuizRegion) => {

@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { InteractiveMap } from '@/components/map/interactive-map';
 import { FlagsHeader } from '@/components/quiz/flags-header';
+import { FlagCard } from '@/components/quiz/flag-card';
 import { AnswerFeedback, FEEDBACK_DELAY_CORRECT, FEEDBACK_DELAY_INCORRECT } from '@/components/quiz/answer-feedback';
 import { QuizResults } from '@/components/quiz/quiz-results';
 import { QuitConfirmDialog } from '@/components/quiz/quit-confirm-dialog';
@@ -20,6 +21,7 @@ import { useQuestionTimer } from '@/hooks/use-question-timer';
 import { buildPool, matchInput } from '@/lib/typing-match';
 import type { QuizRegion } from '@/types/quiz-config';
 import { REGION_MAP_DEFAULTS } from '@/data/region-defaults';
+import { regionToFactCategory, type FactCategory } from '@/data/fun-facts';
 
 // ---------------------------------------------------------------------------
 // Question generation
@@ -99,52 +101,106 @@ function MultipleChoiceGame({
   secondsRemaining,
   fractionRemaining,
 }: MultipleChoiceProps) {
+  const alpha2 = COUNTRIES[currentQuestion.countryCode]?.alpha2 ?? '';
+
+  const timerOn = secondsRemaining !== null;
+  const urgent  = timerOn && (secondsRemaining ?? 99) < 10;
+  const R    = 10;
+  const CIRC = 2 * Math.PI * R;
+  const strokeDashoffset = fractionRemaining !== null ? CIRC * (1 - fractionRemaining) : 0;
+
   return (
-    <div className="h-screen flex flex-col bg-board-bg">
-      <FlagsHeader
-        correctCount={correctCount}
-        incorrectCount={incorrectCount}
-        remaining={remaining}
-        countryAlpha2={currentQuestion.countryCode ? (COUNTRIES[currentQuestion.countryCode]?.alpha2 ?? '') : ''}
-        countryName={currentQuestion.countryName}
-        onQuit={onQuit}
-        secondsRemaining={secondsRemaining}
-        fractionRemaining={fractionRemaining}
-      />
+    <div className="h-screen flex flex-col bg-board-bg overflow-hidden">
+
+      {/* Compact stats bar */}
+      <div className="bg-board-card border-b border-board-border px-4 py-3 flex items-center justify-between shrink-0">
+        <button onClick={onQuit} className="text-board-muted hover:text-board-text transition-colors">
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        {timerOn ? (
+          <div className={`flex items-center gap-1.5 ${urgent ? 'text-red-500' : 'text-board-muted'}`}>
+            <svg width="24" height="24" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r={R} fill="none" stroke="currentColor" strokeWidth={2} opacity={0.2} />
+              <circle
+                cx="12" cy="12" r={R}
+                fill="none" stroke="currentColor" strokeWidth={2}
+                strokeDasharray={CIRC}
+                strokeDashoffset={strokeDashoffset}
+                strokeLinecap="round"
+                transform="rotate(-90 12 12)"
+                style={{ transition: 'stroke-dashoffset 0.2s linear' }}
+              />
+            </svg>
+            <span className="text-sm font-bold tabular-nums min-w-[2ch] text-center">{secondsRemaining}</span>
+          </div>
+        ) : (
+          <div className="w-14" />
+        )}
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            <span className="w-5 h-5 rounded-full bg-board-green flex items-center justify-center text-white text-[10px] font-bold">✓</span>
+            <span className="text-sm font-bold text-board-green">{correctCount}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="w-5 h-5 rounded-full bg-red-400 flex items-center justify-center text-white text-[10px] font-bold">✗</span>
+            <span className="text-sm font-bold text-red-400">{incorrectCount}</span>
+          </div>
+          <div className="w-px h-4 bg-board-border" />
+          <span className="text-sm font-bold text-board-muted">{remaining} left</span>
+        </div>
+      </div>
+
+      {/* Big flag in the center */}
+      <div className="flex-1 flex flex-col items-center justify-center px-8 gap-4 min-h-0">
+        <motion.div
+          key={currentQuestion.countryCode}
+          initial={{ opacity: 0, scale: 0.92 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+          className="w-full max-w-xs"
+        >
+          <FlagCard alpha2={alpha2} countryName={currentQuestion.countryName} className="w-full" />
+        </motion.div>
+        <p className="text-base font-extrabold text-board-text text-center leading-snug">
+          Which country is <span className="text-board-green">this flag?</span>
+        </p>
+      </div>
 
       {/* Choice buttons */}
-      <div className="flex-1 flex flex-col justify-end px-4 pb-6 gap-2.5">
-        <AnimatePresence mode="wait">
-          {choices.map((choice, i) => {
-            let buttonClass =
-              'w-full py-4 px-5 rounded-2xl text-left font-bold text-base border-2 transition-all ';
+      <div className="px-4 pb-6 flex flex-col gap-2.5 shrink-0">
+        {choices.map((choice, i) => {
+          let buttonClass =
+            'w-full py-3.5 px-5 rounded-2xl text-left font-bold text-base border-2 transition-all ';
 
-            if (status === 'feedback' && lastAttempt) {
-              if (choice.countryCode === lastAttempt.correctCode) {
-                buttonClass += 'bg-board-green/10 border-board-green text-board-green';
-              } else if (choice.countryCode === lastAttempt.selectedCode && !lastAttempt.correct) {
-                buttonClass += 'bg-red-50 border-red-400 text-red-600';
-              } else {
-                buttonClass += 'bg-board-card border-board-border text-board-muted opacity-50';
-              }
+          if (status === 'feedback' && lastAttempt) {
+            if (choice.countryCode === lastAttempt.correctCode) {
+              buttonClass += 'bg-board-green/10 border-board-green text-board-green';
+            } else if (choice.countryCode === lastAttempt.selectedCode && !lastAttempt.correct) {
+              buttonClass += 'bg-red-50 border-red-400 text-red-600';
             } else {
-              buttonClass += 'bg-board-card border-board-border text-board-text hover:bg-board-hover active:scale-[0.98]';
+              buttonClass += 'bg-board-card border-board-border text-board-muted opacity-50';
             }
+          } else {
+            buttonClass += 'bg-board-card border-board-border text-board-text hover:bg-board-hover active:scale-[0.98]';
+          }
 
-            return (
-              <motion.button
-                key={choice.countryCode}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04, type: 'spring', stiffness: 320, damping: 28 }}
-                onClick={() => { if (status === 'playing') onSelect(choice.countryCode); }}
-                className={buttonClass}
-              >
-                {choice.countryName}
-              </motion.button>
-            );
-          })}
-        </AnimatePresence>
+          return (
+            <motion.button
+              key={choice.countryCode}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04, type: 'spring', stiffness: 320, damping: 28 }}
+              onClick={() => { if (status === 'playing') onSelect(choice.countryCode); }}
+              className={buttonClass}
+            >
+              {choice.countryName}
+            </motion.button>
+          );
+        })}
       </div>
     </div>
   );
@@ -156,7 +212,6 @@ function MultipleChoiceGame({
 
 interface PinItProps {
   currentQuestion: QuizQuestion;
-  stickers: Record<string, string>;
   feedbackMap: Record<string, import('@/components/map/country-path').CountryFeedback>;
   dimmedCountries: Set<string>;
   mapKey: number;
@@ -171,18 +226,18 @@ interface PinItProps {
   secondsRemaining: number | null;
   fractionRemaining: number | null;
   showFeedback: boolean;
-  lastAttempt: { correct: boolean } | null;
+  lastAttempt: { correct: boolean; correctCode: string } | null;
   countryNames: Record<string, string>;
   showQuitDialog: boolean;
   onQuitCancel: () => void;
   onQuitConfirm: () => void;
   totalCount: number;
   attemptCount: number;
+  factCategory: FactCategory;
 }
 
 function PinItGame({
   currentQuestion,
-  stickers,
   feedbackMap,
   dimmedCountries,
   mapKey,
@@ -204,6 +259,7 @@ function PinItGame({
   onQuitConfirm,
   totalCount,
   attemptCount,
+  factCategory,
 }: PinItProps) {
   return (
     <MapThemeContext.Provider value={theme}>
@@ -227,17 +283,13 @@ function PinItGame({
             disabled={disabled}
             initialCenter={REGION_MAP_DEFAULTS[region].center}
             initialZoom={REGION_MAP_DEFAULTS[region].zoom}
-            stickers={stickers}
           />
         </div>
         <AnswerFeedback
           visible={showFeedback}
           correct={lastAttempt?.correct ?? false}
-          correctCountryName={
-            lastAttempt && 'correctCode' in lastAttempt
-              ? countryNames[(lastAttempt as { correctCode: string }).correctCode] || ''
-              : ''
-          }
+          correctCountryName={lastAttempt ? countryNames[lastAttempt.correctCode] || '' : ''}
+          factCategory={factCategory}
         />
         <QuitConfirmDialog
           visible={showQuitDialog}
@@ -331,29 +383,80 @@ function TypeItGame({
     onSkip();
   }
 
+  const alpha2 = COUNTRIES[currentQuestion.countryCode]?.alpha2 ?? '';
+  const timerOn = secondsRemaining !== null;
+  const urgent  = timerOn && (secondsRemaining ?? 99) < 10;
+  const R    = 10;
+  const CIRC = 2 * Math.PI * R;
+  const strokeDashoffset = fractionRemaining !== null ? CIRC * (1 - fractionRemaining) : 0;
+
   return (
-    <div className="h-screen flex flex-col bg-board-bg">
-      <FlagsHeader
-        correctCount={correctCount}
-        incorrectCount={incorrectCount}
-        remaining={remaining}
-        countryAlpha2={COUNTRIES[currentQuestion.countryCode]?.alpha2 ?? ''}
-        countryName={currentQuestion.countryName}
-        onQuit={onQuit}
-        secondsRemaining={secondsRemaining}
-        fractionRemaining={fractionRemaining}
-      />
+    <div className="h-screen flex flex-col bg-board-bg overflow-hidden">
 
-      {/* Spacer / prompt */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 gap-3">
-        <p className="text-board-muted text-sm">Type the country name</p>
+      {/* Compact stats bar */}
+      <div className="bg-board-card border-b border-board-border px-4 py-3 flex items-center justify-between shrink-0">
+        <button onClick={onQuit} className="text-board-muted hover:text-board-text transition-colors">
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
 
-        {/* Shake wrapper */}
+        {timerOn ? (
+          <div className={`flex items-center gap-1.5 ${urgent ? 'text-red-500' : 'text-board-muted'}`}>
+            <svg width="24" height="24" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r={R} fill="none" stroke="currentColor" strokeWidth={2} opacity={0.2} />
+              <circle
+                cx="12" cy="12" r={R}
+                fill="none" stroke="currentColor" strokeWidth={2}
+                strokeDasharray={CIRC}
+                strokeDashoffset={strokeDashoffset}
+                strokeLinecap="round"
+                transform="rotate(-90 12 12)"
+                style={{ transition: 'stroke-dashoffset 0.2s linear' }}
+              />
+            </svg>
+            <span className="text-sm font-bold tabular-nums min-w-[2ch] text-center">{secondsRemaining}</span>
+          </div>
+        ) : (
+          <div className="w-14" />
+        )}
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            <span className="w-5 h-5 rounded-full bg-board-green flex items-center justify-center text-white text-[10px] font-bold">✓</span>
+            <span className="text-sm font-bold text-board-green">{correctCount}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="w-5 h-5 rounded-full bg-red-400 flex items-center justify-center text-white text-[10px] font-bold">✗</span>
+            <span className="text-sm font-bold text-red-400">{incorrectCount}</span>
+          </div>
+          <div className="w-px h-4 bg-board-border" />
+          <span className="text-sm font-bold text-board-muted">{remaining} left</span>
+        </div>
+      </div>
+
+      {/* Big flag centered */}
+      <div className="flex-1 flex flex-col items-center justify-center px-8 gap-4 min-h-0">
+        <motion.div
+          key={currentQuestion.countryCode}
+          initial={{ opacity: 0, scale: 0.92 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+          className="w-full max-w-xs"
+        >
+          <FlagCard alpha2={alpha2} countryName={currentQuestion.countryName} className="w-full" />
+        </motion.div>
+        <p className="text-base font-extrabold text-board-text text-center leading-snug">
+          Type the <span className="text-board-green">country name</span>
+        </p>
+      </div>
+
+      {/* Input + skip */}
+      <div className="px-4 pb-6 flex flex-col gap-3 shrink-0">
         <motion.div
           key={shakeKey}
           animate={shakeKey > 0 ? { x: [0, -10, 10, -8, 8, -4, 4, 0] } : {}}
           transition={{ duration: 0.35 }}
-          className="w-full max-w-sm"
         >
           <input
             ref={inputRef}
@@ -370,13 +473,12 @@ function TypeItGame({
             autoCorrect="off"
             autoCapitalize="off"
             spellCheck={false}
-            className="w-full text-center text-lg font-bold bg-board-card border-2 border-board-border rounded-2xl px-4 py-3 text-board-text placeholder:text-board-muted focus:outline-none focus:border-board-green transition-colors"
+            className="w-full text-center text-lg font-bold bg-board-card border-2 border-board-border rounded-2xl px-4 py-3.5 text-board-text placeholder:text-board-muted focus:outline-none focus:border-board-green transition-colors"
           />
         </motion.div>
-
         <button
           onClick={handleSkipClick}
-          className="text-xs text-board-muted underline underline-offset-2 mt-1"
+          className="text-xs text-board-muted text-center underline underline-offset-2"
         >
           Skip
         </button>
@@ -451,6 +553,7 @@ export default function FlagsPage() {
     : String(currentIndex);
   const { secondsRemaining, fractionRemaining } = useQuestionTimer({
     timer: flagsConfig?.timer ?? 'off',
+    customTimerSeconds: flagsConfig?.customTimerSeconds,
     isActive: status === 'playing',
     questionKey,
     onExpire: timeoutQuestion,
@@ -461,18 +564,6 @@ export default function FlagsPage() {
     () => buildChoices(questions, currentIndex),
     [currentIndex, questions.length], // eslint-disable-line react-hooks/exhaustive-deps
   );
-
-  // Pin-it stickers: flag for every correctly answered country
-  const stickers = useMemo(() => {
-    const result: Record<string, string> = {};
-    for (const attempt of attempts) {
-      if (attempt.correct) {
-        const alpha2 = COUNTRIES[attempt.correctCode]?.alpha2;
-        if (alpha2) result[attempt.correctCode] = alpha2;
-      }
-    }
-    return result;
-  }, [attempts]);
 
   const countryNames = useMemo(() => {
     const names: Record<string, string> = {};
@@ -575,6 +666,7 @@ export default function FlagsPage() {
           countryNames={countryNames}
           onPlayAgain={handlePlayAgain}
           onGoHome={handleGoHome}
+          factCategory={regionToFactCategory('countries', flagsConfig?.region ?? 'world')}
         />
       </div>
     );
@@ -610,6 +702,7 @@ export default function FlagsPage() {
           correctCountryName={
             lastAttempt ? countryNames[lastAttempt.correctCode] || lastAttempt.correctCode : ''
           }
+          factCategory={regionToFactCategory('countries', flagsConfig?.region ?? 'world')}
         />
       </>
     );
@@ -619,7 +712,6 @@ export default function FlagsPage() {
     return (
       <PinItGame
         currentQuestion={currentQuestion!}
-        stickers={stickers}
         feedbackMap={feedbackMap}
         dimmedCountries={dimmedCountries}
         mapKey={mapKey}
@@ -641,6 +733,7 @@ export default function FlagsPage() {
         onQuitConfirm={handleQuitConfirm}
         totalCount={questions.length}
         attemptCount={attempts.length}
+        factCategory={regionToFactCategory('countries', flagsConfig?.region ?? 'world')}
       />
     );
   }
@@ -672,6 +765,7 @@ export default function FlagsPage() {
         correctCountryName={
           lastAttempt ? countryNames[lastAttempt.correctCode] || lastAttempt.correctCode : ''
         }
+        factCategory={regionToFactCategory('countries', flagsConfig?.region ?? 'world')}
       />
     </>
   );

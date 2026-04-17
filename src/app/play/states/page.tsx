@@ -97,6 +97,7 @@ export default function StatesQuizPage() {
 
   const { secondsRemaining, fractionRemaining } = useQuestionTimer({
     timer: config.timer,
+    customTimerSeconds: config.customTimerSeconds,
     isActive: status === 'playing',
     questionKey,
     onExpire: timeoutQuestion,
@@ -181,6 +182,7 @@ export default function StatesQuizPage() {
           countryNames={stateNames}
           onPlayAgain={handlePlayAgain}
           onGoHome={handleGoHome}
+          factCategory="us_states"
         />
       </div>
     );
@@ -225,6 +227,7 @@ export default function StatesQuizPage() {
         correctCountryName={
           lastAttempt ? stateNames[lastAttempt.correctCode] || lastAttempt.correctCode : ''
         }
+        factCategory="us_states"
       />
 
       <QuitConfirmDialog

@@ -24,6 +24,7 @@ import {
   type QuizRegion,
 } from '@/types/quiz-config';
 import { REGION_MAP_DEFAULTS } from '@/data/region-defaults';
+import { regionToFactCategory } from '@/data/fun-facts';
 
 // ---------------------------------------------------------------------------
 // Question generation
@@ -120,6 +121,7 @@ export default function QuizPage() {
     : String(currentIndex);
   const { secondsRemaining, fractionRemaining } = useQuestionTimer({
     timer: config.timer,
+    customTimerSeconds: config.customTimerSeconds,
     isActive: status === 'playing',
     questionKey,
     onExpire: timeoutQuestion,
@@ -233,6 +235,7 @@ export default function QuizPage() {
           countryNames={countryNames}
           onPlayAgain={handlePlayAgain}
           onGoHome={handleGoHome}
+          factCategory={regionToFactCategory('countries', config.region)}
         />
       </div>
     );
@@ -282,6 +285,7 @@ export default function QuizPage() {
               ? countryNames[lastAttempt.correctCode] || lastAttempt.correctCode
               : ''
           }
+          factCategory={regionToFactCategory('countries', config.region)}
         />
 
         <QuitConfirmDialog

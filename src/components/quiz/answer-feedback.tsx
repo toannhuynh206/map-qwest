@@ -1,19 +1,24 @@
 'use client';
 
+import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getRandomFunFact, type FactCategory } from '@/data/fun-facts';
 
-// Correct answers auto-advance after 900ms, incorrect after 1500ms
+// Correct answers auto-advance after 900ms, incorrect after 1800ms
 export const FEEDBACK_DELAY_CORRECT = 900;
-export const FEEDBACK_DELAY_INCORRECT = 1500;
+export const FEEDBACK_DELAY_INCORRECT = 1800;
 
 interface AnswerFeedbackProps {
   visible: boolean;
   correct: boolean;
   correctCountryName: string;
+  factCategory?: FactCategory;
 }
 
-export function AnswerFeedback({ visible, correct, correctCountryName }: AnswerFeedbackProps) {
+export function AnswerFeedback({ visible, correct, correctCountryName, factCategory = 'world' }: AnswerFeedbackProps) {
   const delay = correct ? FEEDBACK_DELAY_CORRECT : FEEDBACK_DELAY_INCORRECT;
+  // Stable per mount so it doesn't re-roll while visible
+  const funFact = useMemo(() => getRandomFunFact(factCategory), [factCategory]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <AnimatePresence>
@@ -33,7 +38,7 @@ export function AnswerFeedback({ visible, correct, correctCountryName }: AnswerF
             }`}>
               {correct ? '✓' : '✗'}
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <p className={`font-extrabold text-base ${correct ? 'text-board-green-dark' : 'text-red-600'}`}>
                 {correct ? 'Correct!' : 'Incorrect'}
               </p>
@@ -43,6 +48,14 @@ export function AnswerFeedback({ visible, correct, correctCountryName }: AnswerF
                 </p>
               )}
             </div>
+          </div>
+
+          {/* Fun fact — shown on every answer */}
+          <div className={`px-5 pb-3 max-w-4xl mx-auto flex gap-2 items-start border-t ${correct ? 'border-green-100' : 'border-red-100'} pt-2.5`}>
+            <span className="text-sm shrink-0">🌍</span>
+            <p className={`text-xs leading-snug ${correct ? 'text-green-700' : 'text-red-700'}`}>
+              <span className="font-bold">Did you know? </span>{funFact}
+            </p>
           </div>
 
           {/* Auto-advance progress bar */}

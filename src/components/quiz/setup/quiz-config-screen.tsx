@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { COUNTRIES } from '@/data/countries';
 import { SMALL_COUNTRY_COORDS } from '@/data/country-coordinates';
 import { THEME_COLORS, THEME_META } from '@/context/map-theme-context';
@@ -34,10 +34,11 @@ function getCountryCount(region: QuizRegion): number {
 }
 
 const TIMER_OPTIONS: { value: TimerOption; label: string }[] = [
-  { value: 'off', label: 'Off' },
-  { value: '30s', label: '30s' },
-  { value: '1min', label: '1 min' },
-  { value: '2min', label: '2 min' },
+  { value: 'off',    label: 'Off'    },
+  { value: '30s',    label: '30s'    },
+  { value: '1min',   label: '1 min'  },
+  { value: '2min',   label: '2 min'  },
+  { value: 'custom', label: 'Custom' },
 ];
 
 const THEMES: MapTheme[] = ['classic', 'political', 'colorful', 'terrain'];
@@ -72,15 +73,18 @@ export function QuizConfigScreen({ region, onBack, onStart, gameTitle = 'Pin the
     (o) => o.value === 'all' || (o.value as number) <= totalCount,
   );
 
-  const [questionCount, setQuestionCount] = useState<QuestionCount>(
-    totalCount >= 10 ? 10 : 'all',
-  );
-  const [timer, setTimer] = useState<TimerOption>(DEFAULT_QUIZ_CONFIG.timer);
-  const [theme, setTheme] = useState<MapTheme>(DEFAULT_QUIZ_CONFIG.theme);
-  const [persistFeedback, setPersistFeedback] = useState(DEFAULT_QUIZ_CONFIG.persistFeedback);
+  const [questionCount,    setQuestionCount]    = useState<QuestionCount>(totalCount >= 10 ? 10 : 'all');
+  const [timer,            setTimer]            = useState<TimerOption>(DEFAULT_QUIZ_CONFIG.timer);
+  const [customTimerSecs,  setCustomTimerSecs]  = useState(45);
+  const [theme,            setTheme]            = useState<MapTheme>(DEFAULT_QUIZ_CONFIG.theme);
+  const [persistFeedback,  setPersistFeedback]  = useState(DEFAULT_QUIZ_CONFIG.persistFeedback);
+  const customInputRef = useRef<HTMLInputElement>(null);
 
   function handleStart() {
-    onStart({ region, questionCount, timer, theme, persistFeedback });
+    onStart({
+      region, questionCount, timer, theme, persistFeedback,
+      customTimerSeconds: timer === 'custom' ? customTimerSecs : undefined,
+    });
   }
 
   return (
@@ -137,7 +141,7 @@ export function QuizConfigScreen({ region, onBack, onStart, gameTitle = 'Pin the
               {TIMER_OPTIONS.map((o) => (
                 <button
                   key={o.value}
-                  onClick={() => setTimer(o.value)}
+                  onClick={() => { setTimer(o.value); if (o.value === 'custom') setTimeout(() => customInputRef.current?.focus(), 50); }}
                   className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${
                     timer === o.value
                       ? 'bg-board-text text-white border-board-text shadow-sm'
@@ -148,6 +152,21 @@ export function QuizConfigScreen({ region, onBack, onStart, gameTitle = 'Pin the
                 </button>
               ))}
             </div>
+            {timer === 'custom' && (
+              <div className="mt-3 flex items-center gap-3 bg-board-card border border-board-border rounded-2xl px-4 py-3">
+                <span className="text-sm text-board-muted shrink-0">Seconds per question</span>
+                <input
+                  ref={customInputRef}
+                  type="number"
+                  min={5}
+                  max={300}
+                  value={customTimerSecs}
+                  onChange={(e) => setCustomTimerSecs(Math.max(5, Math.min(300, Number(e.target.value) || 5)))}
+                  className="w-20 text-center text-base font-bold bg-board-bg border border-board-border rounded-xl px-2 py-1.5 text-board-text focus:outline-none focus:border-board-green transition-colors"
+                />
+                <span className="text-sm font-bold text-board-text shrink-0">sec</span>
+              </div>
+            )}
           </section>
 
           {/* Persist Feedback */}

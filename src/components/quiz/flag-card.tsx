@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 function toFlagEmoji(alpha2: string): string {
   return alpha2
@@ -20,6 +20,11 @@ export function FlagCard({ alpha2, countryName, className = '' }: FlagCardProps)
   const [loaded, setLoaded] = useState(false);
   const [error, setError]   = useState(false);
   const src = `https://flagcdn.com/w320/${alpha2.toLowerCase()}.png`;
+
+  useEffect(() => {
+    setLoaded(false);
+    setError(false);
+  }, [alpha2]);
 
   return (
     <div

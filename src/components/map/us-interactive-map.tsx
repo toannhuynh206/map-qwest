@@ -49,12 +49,14 @@ function StatePathComponent({
   const fill = FILL_COLORS[feedback] ?? baseFill;
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (!e.touches.length) return;
     const t = e.touches[0];
     touchStart.current = { x: t.clientX, y: t.clientY };
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (!isClickable || !touchStart.current) return;
+    if (!e.changedTouches.length) return;
     const t = e.changedTouches[0];
     const dx = t.clientX - touchStart.current.x;
     const dy = t.clientY - touchStart.current.y;
@@ -235,7 +237,7 @@ export function USInteractiveMap({
 
       <div className="absolute bottom-4 right-4 flex flex-col gap-1.5 z-10">
         <button
-          onClick={handleZoomIn}
+          onClick={(e) => { e.stopPropagation(); handleZoomIn(); }}
           className="w-9 h-9 bg-board-card border border-board-border rounded-xl flex items-center justify-center text-board-muted hover:bg-board-hover shadow-sm transition-colors"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -243,7 +245,7 @@ export function USInteractiveMap({
           </svg>
         </button>
         <button
-          onClick={handleZoomOut}
+          onClick={(e) => { e.stopPropagation(); handleZoomOut(); }}
           className="w-9 h-9 bg-board-card border border-board-border rounded-xl flex items-center justify-center text-board-muted hover:bg-board-hover shadow-sm transition-colors"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>

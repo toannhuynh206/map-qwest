@@ -1,6 +1,9 @@
 'use client';
 
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { getScoreTier, getEndMessage } from '@/data/end-messages';
+import { getRandomFunFact, type FactCategory } from '@/data/fun-facts';
 
 interface QuizResultsProps {
   score: number;
@@ -15,6 +18,7 @@ interface QuizResultsProps {
   countryNames: Record<string, string>;
   onPlayAgain: () => void;
   onGoHome: () => void;
+  factCategory?: FactCategory;
 }
 
 export function QuizResults({
@@ -24,21 +28,22 @@ export function QuizResults({
   countryNames,
   onPlayAgain,
   onGoHome,
+  factCategory = 'world',
 }: QuizResultsProps) {
   const accuracy = Math.round((score / totalQuestions) * 100);
   const avgTimeMs = Math.round(
     attempts.reduce((sum, a) => sum + a.timeMs, 0) / attempts.length,
   );
 
-  const getMessage = () => {
-    if (accuracy === 100) return { text: 'Perfect!', emoji: '🏆' };
-    if (accuracy >= 80) return { text: 'Amazing!', emoji: '🌟' };
-    if (accuracy >= 60) return { text: 'Great job!', emoji: '🎯' };
-    if (accuracy >= 40) return { text: 'Good effort!', emoji: '💪' };
-    return { text: 'Keep learning!', emoji: '📚' };
-  };
+  // Stable per-mount so re-renders don't re-roll
+  const endMessage = useMemo(() => getEndMessage(getScoreTier(score, totalQuestions)), [score, totalQuestions]);
+  const funFact    = useMemo(() => getRandomFunFact(factCategory), [factCategory]);
 
-  const message = getMessage();
+  const emoji =
+    accuracy === 100 ? '🏆' :
+    accuracy >= 80   ? '🌟' :
+    accuracy >= 60   ? '🎯' :
+    accuracy >= 40   ? '💪' : '📚';
 
   return (
     <div className="flex flex-col items-center px-5 py-8 h-full overflow-y-auto bg-board-bg">
@@ -49,7 +54,7 @@ export function QuizResults({
         transition={{ type: 'spring', damping: 15, delay: 0.2 }}
         className="w-32 h-32 rounded-full bg-board-green flex flex-col items-center justify-center mb-4 shadow-lg"
       >
-        <span className="text-3xl">{message.emoji}</span>
+        <span className="text-3xl">{emoji}</span>
         <span className="text-white font-black text-3xl">{accuracy}%</span>
       </motion.div>
 
@@ -57,14 +62,28 @@ export function QuizResults({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="text-2xl font-black text-board-text mb-1"
+        className="text-2xl font-black text-board-text mb-1 text-center"
       >
-        {message.text}
+        {endMessage}
       </motion.h2>
 
-      <p className="text-board-muted mb-6">
+      <p className="text-board-muted mb-5 text-center">
         {score} of {totalQuestions} correct &middot; avg {(avgTimeMs / 1000).toFixed(1)}s
       </p>
+
+      {/* Fun fact */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+        className="w-full max-w-sm mb-6 bg-board-card border border-board-border rounded-2xl px-4 py-3 flex gap-3 items-start"
+      >
+        <span className="text-xl shrink-0">🌍</span>
+        <div>
+          <p className="text-[10px] font-bold text-board-green uppercase tracking-wider mb-0.5">Did you know?</p>
+          <p className="text-sm text-board-text leading-snug">{funFact}</p>
+        </div>
+      </motion.div>
 
       {/* Action buttons */}
       <div className="flex gap-3 w-full max-w-sm mb-8">

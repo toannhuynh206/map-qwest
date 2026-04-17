@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { THEME_COLORS, THEME_META } from '@/context/map-theme-context';
 import {
   DEFAULT_QUIZ_CONFIG,
@@ -20,6 +20,7 @@ export interface FlagsConfig {
   flagsMode: FlagsMode;
   questionCount: QuestionCount;
   timer: TimerOption;
+  customTimerSeconds?: number;
   theme: MapTheme;
 }
 
@@ -30,10 +31,11 @@ const MODES: { id: FlagsMode; icon: string; title: string; description: string }
 ];
 
 const TIMER_OPTIONS: { value: TimerOption; label: string }[] = [
-  { value: 'off',   label: 'Off'   },
-  { value: '30s',   label: '30s'   },
-  { value: '1min',  label: '1 min' },
-  { value: '2min',  label: '2 min' },
+  { value: 'off',    label: 'Off'    },
+  { value: '30s',    label: '30s'    },
+  { value: '1min',   label: '1 min'  },
+  { value: '2min',   label: '2 min'  },
+  { value: 'custom', label: 'Custom' },
 ];
 
 const WORLD_PREVIEW_BLOBS = [
@@ -75,10 +77,12 @@ export function FlagsConfigScreen({ region, onBack, onStart }: FlagsConfigScreen
     (o) => o.value === 'all' || (o.value as number) <= total,
   );
 
-  const [flagsMode,      setFlagsMode]      = useState<FlagsMode>('multiple-choice');
-  const [questionCount,  setQuestionCount]  = useState<QuestionCount>(total >= 10 ? 10 : 'all');
-  const [timer,          setTimer]          = useState<TimerOption>(DEFAULT_QUIZ_CONFIG.timer);
-  const [theme,          setTheme]          = useState<MapTheme>(DEFAULT_QUIZ_CONFIG.theme);
+  const [flagsMode,       setFlagsMode]       = useState<FlagsMode>('multiple-choice');
+  const [questionCount,   setQuestionCount]   = useState<QuestionCount>(total >= 10 ? 10 : 'all');
+  const [timer,           setTimer]           = useState<TimerOption>(DEFAULT_QUIZ_CONFIG.timer);
+  const [customTimerSecs, setCustomTimerSecs] = useState(45);
+  const [theme,           setTheme]           = useState<MapTheme>(DEFAULT_QUIZ_CONFIG.theme);
+  const customInputRef = useRef<HTMLInputElement>(null);
 
   const showMap = flagsMode === 'pin-it' || flagsMode === 'type-it';
 
@@ -171,7 +175,7 @@ export function FlagsConfigScreen({ region, onBack, onStart }: FlagsConfigScreen
               {TIMER_OPTIONS.map((o) => (
                 <button
                   key={o.value}
-                  onClick={() => setTimer(o.value)}
+                  onClick={() => { setTimer(o.value); if (o.value === 'custom') setTimeout(() => customInputRef.current?.focus(), 50); }}
                   className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${
                     timer === o.value
                       ? 'bg-board-text text-white border-board-text shadow-sm'
@@ -182,6 +186,21 @@ export function FlagsConfigScreen({ region, onBack, onStart }: FlagsConfigScreen
                 </button>
               ))}
             </div>
+            {timer === 'custom' && (
+              <div className="mt-3 flex items-center gap-3 bg-board-card border border-board-border rounded-2xl px-4 py-3">
+                <span className="text-sm text-board-muted shrink-0">Seconds per question</span>
+                <input
+                  ref={customInputRef}
+                  type="number"
+                  min={5}
+                  max={300}
+                  value={customTimerSecs}
+                  onChange={(e) => setCustomTimerSecs(Math.max(5, Math.min(300, Number(e.target.value) || 5)))}
+                  className="w-20 text-center text-base font-bold bg-board-bg border border-board-border rounded-xl px-2 py-1.5 text-board-text focus:outline-none focus:border-board-green transition-colors"
+                />
+                <span className="text-sm font-bold text-board-text shrink-0">sec</span>
+              </div>
+            )}
           </section>
 
           {/* Map style — only relevant for map modes */}
@@ -242,7 +261,7 @@ export function FlagsConfigScreen({ region, onBack, onStart }: FlagsConfigScreen
       <div className="bg-board-card border-t border-board-border px-4 py-4">
         <div className="max-w-2xl mx-auto">
           <button
-            onClick={() => onStart({ region, flagsMode, questionCount, timer, theme })}
+            onClick={() => onStart({ region, flagsMode, questionCount, timer, customTimerSeconds: timer === 'custom' ? customTimerSecs : undefined, theme })}
             className="w-full py-3.5 bg-board-green hover:bg-board-green-dark text-white font-extrabold text-base rounded-2xl shadow-md btn-chunky transition-colors active:scale-[0.99]"
           >
             Start →
