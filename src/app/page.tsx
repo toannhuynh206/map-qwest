@@ -57,10 +57,10 @@ const QUIZZES = [
   {
     id: 'puzzle',
     title: 'Daily Puzzle',
-    description: '3 curated questions, one shot',
+    description: '6 curated questions, one shot per day',
     icon: '🧩',
     href: '/play/puzzle',
-    available: false,
+    available: true,
     accent: '#FF9500',
   },
 ] as const;
