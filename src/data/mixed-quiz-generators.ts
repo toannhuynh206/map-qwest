@@ -1,5 +1,5 @@
 /**
- * Generates dynamic quiz questions (flag, capital, continent, shape)
+ * Generates dynamic quiz questions (flag, continent, shape, neighbor/borders)
  * and assembles a mixed quiz from all sources.
  */
 
@@ -12,11 +12,8 @@ import { QUIZ_BANK, type BankDifficulty } from '@/data/mixed-quiz-bank';
 
 export type QuestionType =
   | 'flag_to_country'
-  | 'capital_to_country'
-  | 'country_to_capital'
   | 'continent_of_country'
   | 'shape_to_country'
-  | 'geography_trivia'
   | 'neighbor_trivia';
 
 export type QuizDifficulty = 'easy' | 'medium' | 'hard';
@@ -126,54 +123,6 @@ function generateFlagQuestion(pool: CountryInfo[]): MixedQuestion | null {
 }
 
 // ---------------------------------------------------------------------------
-// Capital → Country
-// ---------------------------------------------------------------------------
-
-function generateCapitalToCountryQuestion(pool: CountryInfo[]): MixedQuestion | null {
-  const country = pickRandom(pool.filter(c => c.capital));
-
-  const sameRegion = pool.filter(c => c.region === country.region && c.alpha3 !== country.alpha3 && c.capital);
-  const distractorPool = sameRegion.length >= 3 ? sameRegion : pool.filter(c => c.alpha3 !== country.alpha3 && c.capital);
-  const distractors = pickN(distractorPool, 3);
-  if (distractors.length < 3) return null;
-
-  const options = shuffle([country.name, ...distractors.map(d => d.name)]) as [string, string, string, string];
-
-  return {
-    id: nextId(),
-    type: 'capital_to_country',
-    difficulty: 'easy',
-    question: `${country.capital} is the capital city of which country?`,
-    options,
-    answer: country.name,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Country → Capital
-// ---------------------------------------------------------------------------
-
-function generateCountryToCapitalQuestion(pool: CountryInfo[]): MixedQuestion | null {
-  const country = pickRandom(pool.filter(c => c.capital));
-
-  const sameRegion = pool.filter(c => c.region === country.region && c.alpha3 !== country.alpha3 && c.capital);
-  const distractorPool = sameRegion.length >= 3 ? sameRegion : pool.filter(c => c.alpha3 !== country.alpha3 && c.capital);
-  const distractors = pickN(distractorPool, 3);
-  if (distractors.length < 3) return null;
-
-  const options = shuffle([country.capital, ...distractors.map(d => d.capital)]) as [string, string, string, string];
-
-  return {
-    id: nextId(),
-    type: 'country_to_capital',
-    difficulty: 'easy',
-    question: `What is the capital city of ${country.name}?`,
-    options,
-    answer: country.capital,
-  };
-}
-
-// ---------------------------------------------------------------------------
 // Continent of country
 // ---------------------------------------------------------------------------
 
@@ -235,11 +184,12 @@ function generateShapeQuestion(difficulty: QuizDifficulty): MixedQuestion | null
 }
 
 // ---------------------------------------------------------------------------
-// Trivia from bank
+// Neighbor / borders from bank (neighbor_trivia only)
 // ---------------------------------------------------------------------------
 
-function getTrivia(difficulty: QuizDifficulty, used: Set<string>): MixedQuestion | null {
+function getNeighborQuestion(difficulty: QuizDifficulty, used: Set<string>): MixedQuestion | null {
   const eligible = QUIZ_BANK.filter(q => {
+    if (q.type !== 'neighbor_trivia') return false;
     if (used.has(q.id)) return false;
     if (difficulty === 'easy')   return q.difficulty === 'easy';
     if (difficulty === 'medium') return q.difficulty === 'easy' || q.difficulty === 'medium';
@@ -252,7 +202,7 @@ function getTrivia(difficulty: QuizDifficulty, used: Set<string>): MixedQuestion
 
   return {
     id: nextId(),
-    type: q.type,
+    type: 'neighbor_trivia' as const,
     difficulty,
     question: q.question,
     options: [...q.options] as [string, string, string, string],
@@ -267,9 +217,8 @@ function getTrivia(difficulty: QuizDifficulty, used: Set<string>): MixedQuestion
 
 export function buildMixedQuiz(count: number, difficulty: QuizDifficulty): MixedQuestion[] {
   const pool = getPool(difficulty);
-  const usedTriviaIds = new Set<string>();
+  const usedNeighborIds = new Set<string>();
 
-  // Generate a buffer of each type
   const bufferSize = count * 3;
 
   function tryGenerate<T>(fn: () => T | null, n: number): T[] {
@@ -283,23 +232,19 @@ export function buildMixedQuiz(count: number, difficulty: QuizDifficulty): Mixed
     return results;
   }
 
-  const flags     = tryGenerate(() => generateFlagQuestion(pool), bufferSize);
-  const cap2c     = tryGenerate(() => generateCapitalToCountryQuestion(pool), bufferSize);
-  const c2cap     = tryGenerate(() => generateCountryToCapitalQuestion(pool), bufferSize);
+  const flags      = tryGenerate(() => generateFlagQuestion(pool), bufferSize);
   const continents = tryGenerate(() => generateContinentQuestion(pool), bufferSize);
-  const shapes    = tryGenerate(() => generateShapeQuestion(difficulty), bufferSize);
-  const trivias   = tryGenerate(() => getTrivia(difficulty, usedTriviaIds), Math.min(count, QUIZ_BANK.length));
+  const shapes     = tryGenerate(() => generateShapeQuestion(difficulty), bufferSize);
+  const neighbors  = tryGenerate(() => getNeighborQuestion(difficulty, usedNeighborIds), QUIZ_BANK.length);
 
-  // How many of each type to include
-  const perType = Math.ceil(count / 6);
+  // Even split across 4 types
+  const perType = Math.ceil(count / 4);
 
   const selected: MixedQuestion[] = [
     ...pickN(flags,      perType),
-    ...pickN(cap2c,      perType),
-    ...pickN(c2cap,      perType),
     ...pickN(continents, perType),
     ...pickN(shapes,     perType),
-    ...pickN(trivias,    perType),
+    ...pickN(neighbors,  perType),
   ];
 
   return shuffle(selected).slice(0, count);

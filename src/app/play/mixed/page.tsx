@@ -38,8 +38,8 @@ function SetupScreen({
   const [count, setCount] = useState<QuestionCount>(10);
 
   const DIFFICULTIES: { id: QuizDifficulty; label: string; desc: string; emoji: string }[] = [
-    { id: 'easy',   label: 'Easy',   emoji: '🌱', desc: 'Famous countries, major capitals, well-known flags' },
-    { id: 'medium', label: 'Medium', emoji: '🌍', desc: 'Regional capitals, trickier shapes, varied trivia' },
+    { id: 'easy',   label: 'Easy',   emoji: '🌱', desc: 'Famous flags, well-known shapes, simple borders' },
+    { id: 'medium', label: 'Medium', emoji: '🌍', desc: 'Trickier shapes, regional flags, border puzzles' },
     { id: 'hard',   label: 'Hard',   emoji: '🔥', desc: 'Obscure nations, tricky borders, expert knowledge' },
   ];
 
@@ -57,7 +57,7 @@ function SetupScreen({
         </button>
         <div>
           <h1 className="text-base font-extrabold text-board-text">Geography Quiz</h1>
-          <p className="text-xs text-board-muted">Mix of flags, capitals, shapes & trivia</p>
+          <p className="text-xs text-board-muted">Flags, shapes, continents & borders</p>
         </div>
       </div>
 

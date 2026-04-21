@@ -48,7 +48,7 @@ const QUIZZES = [
   {
     id: 'geography-quiz',
     title: 'Geography Quiz',
-    description: 'Flags, capitals, shapes & trivia — mixed',
+    description: 'Flags, shapes, continents & borders — mixed',
     icon: '🧠',
     href: '/play/mixed',
     available: true,
@@ -67,25 +67,22 @@ const QUIZZES = [
 
 const LEARNING = [
   {
+    id: 'story-mode',
+    title: 'Story Mode',
+    description: 'Learn continent by continent with stories',
+    icon: '📖',
+    href: '/learn',
+    available: true,
+    accent: '#58CC02',
+  },
+  {
     id: 'flashcards',
     title: 'Flashcards',
-    description: 'Learn countries with spaced repetition',
+    description: 'Spaced repetition — coming soon',
     icon: '🃏',
-    href: '/learn/flashcards',
-  },
-  {
-    id: 'facts',
-    title: 'Country Facts',
-    description: 'Capitals, populations, languages',
-    icon: '📖',
-    href: '/learn/facts',
-  },
-  {
-    id: 'us-states',
-    title: 'US States',
-    description: 'All 50 states on the map',
-    icon: '🗺️',
-    href: '/learn/states',
+    href: '/learn',
+    available: false,
+    accent: '#007AFF',
   },
 ] as const;
 
@@ -281,9 +278,21 @@ export default function HomePage() {
         <section>
           <SectionLabel>Learning</SectionLabel>
           <div className="space-y-2.5">
-            {LEARNING.map((item, i) => (
-              <LockedCard key={item.id} icon={item.icon} title={item.title} index={QUIZZES.length + i} />
-            ))}
+            {LEARNING.map((item, i) =>
+              item.available ? (
+                <AvailableCard
+                  key={item.id}
+                  icon={item.icon}
+                  title={item.title}
+                  description={item.description}
+                  href={item.href}
+                  accent={item.accent}
+                  index={QUIZZES.length + i}
+                />
+              ) : (
+                <LockedCard key={item.id} icon={item.icon} title={item.title} index={QUIZZES.length + i} />
+              ),
+            )}
           </div>
         </section>
 

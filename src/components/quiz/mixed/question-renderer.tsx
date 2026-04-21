@@ -15,11 +15,8 @@ interface QuestionRendererProps {
 
 const TYPE_ICONS: Record<MixedQuestion['type'], string> = {
   flag_to_country:      '🏳️',
-  capital_to_country:   '🏛️',
-  country_to_capital:   '🏛️',
   continent_of_country: '🌍',
   shape_to_country:     '🗺️',
-  geography_trivia:     '🌐',
   neighbor_trivia:      '🗺️',
 };
 
@@ -152,11 +149,8 @@ function OptionButton({ option, index, selected, correct, revealed, onSelect }: 
 function labelFor(type: MixedQuestion['type']): string {
   switch (type) {
     case 'flag_to_country':      return 'Identify the Flag';
-    case 'capital_to_country':   return 'Capital → Country';
-    case 'country_to_capital':   return 'Name the Capital';
     case 'continent_of_country': return 'Which Continent?';
     case 'shape_to_country':     return 'Identify the Shape';
-    case 'geography_trivia':     return 'Geography Trivia';
     case 'neighbor_trivia':      return 'Neighbors & Borders';
     default:                     return 'Question';
   }
