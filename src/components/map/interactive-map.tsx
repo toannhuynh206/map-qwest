@@ -25,6 +25,7 @@ const MARKER_FILL: Record<CountryFeedback, string> = {
   'correct-locked':   '#86efac',
   'incorrect-locked': '#fca5a5',
   missed:             '#9CA3AF',
+  target:             '#FF9500',
 };
 
 const TAP_THRESHOLD = 10;
@@ -103,6 +104,7 @@ interface InteractiveMapProps {
   disabled: boolean;
   initialCenter?: [number, number];
   initialZoom?: number;
+  showMiniMap?: boolean;
 }
 
 export function InteractiveMap({
@@ -112,6 +114,7 @@ export function InteractiveMap({
   disabled,
   initialCenter = [0, 10],
   initialZoom = 1,
+  showMiniMap = true,
 }: InteractiveMapProps) {
   const [zoom, setZoom] = useState(initialZoom);
   const [center, setCenter] = useState<[number, number]>(initialCenter);
@@ -237,14 +240,16 @@ export function InteractiveMap({
         </ZoomableGroup>
       </ComposableMap>
 
-      <MiniMap
-        center={center}
-        zoom={zoom}
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
-        onReset={handleReset}
-        onPanTo={handlePanTo}
-      />
+      {showMiniMap && (
+        <MiniMap
+          center={center}
+          zoom={zoom}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onReset={handleReset}
+          onPanTo={handlePanTo}
+        />
+      )}
     </div>
   );
 }

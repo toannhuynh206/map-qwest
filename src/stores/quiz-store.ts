@@ -41,7 +41,7 @@ interface QuizState {
   submitAnswer: (selectedCode: string) => void;
   nextQuestion: () => void;
   skipQuestion: () => void;
-  useHint: (allCountryCodes: string[]) => void;
+  useHint: (allCountryCodes: string[], getRegion: (code: string) => string | undefined) => void;
   useFiftyFifty: (allCountryCodes: string[]) => void;
   quitQuiz: () => void;
   resetQuiz: () => void;
@@ -195,22 +195,24 @@ export const useQuizStore = create<QuizState>((set, get) => ({
     });
   },
 
-  useHint: (allCountryCodes) => {
+  useHint: (allCountryCodes, getRegion) => {
     const state = get();
     if (state.status !== 'playing') return;
 
     const currentQuestion = state.questions[state.currentIndex];
-    const correctRegion = currentQuestion.region;
+    const correctRegion   = currentQuestion.region;
 
-    // Dim all countries NOT in the correct region
+    // Dim all countries that are NOT in the same region as the correct answer.
+    // The correct country itself is never dimmed.
     const dimmed = new Set(
       allCountryCodes.filter((code) => {
-        // We'd need region lookup — for now, don't dim the correct answer
-        return code !== currentQuestion.countryCode;
+        if (code === currentQuestion.countryCode) return false;
+        return getRegion(code) !== correctRegion;
       }),
     );
 
     set({
+      dimmedCountries: dimmed,
       hintsUsed: state.hintsUsed + 1,
     });
   },

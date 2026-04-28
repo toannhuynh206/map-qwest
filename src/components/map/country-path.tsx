@@ -12,7 +12,8 @@ export type CountryFeedback =
   | 'reveal'
   | 'correct-locked'
   | 'incorrect-locked'
-  | 'missed';           // typing mode: not guessed, revealed after give-up
+  | 'missed'            // typing mode: not guessed, revealed after give-up
+  | 'target';           // learn mode: batch highlight / give-up reveal (orange)
 
 interface CountryPathProps {
   geography: Parameters<typeof Geography>[0]['geography'];
@@ -32,6 +33,7 @@ const FEEDBACK_COLORS: Partial<Record<CountryFeedback, string>> = {
   'correct-locked':   '#86efac',
   'incorrect-locked': '#fca5a5',
   missed:             '#9CA3AF',  // gray — not guessed after give-up
+  target:             '#FF9500',  // orange — learn mode batch highlight / give-up
 };
 
 const STROKE_COLOR = '#F7F7F7';

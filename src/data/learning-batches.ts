@@ -29,12 +29,12 @@ export const CONTINENT_META: Record<
   LearningContinent,
   { label: string; emoji: string; description: string }
 > = {
-  europe:    { label: 'Europe',    emoji: '🏰', description: '5 batches · ~49 countries' },
-  africa:    { label: 'Africa',    emoji: '🌍', description: '6 batches · 54 countries' },
-  asia:      { label: 'Asia',      emoji: '🌏', description: '6 batches · ~43 countries' },
-  americas:  { label: 'Americas',  emoji: '🌎', description: '4 batches · 35 countries' },
-  oceania:   { label: 'Oceania',   emoji: '🌊', description: '2 batches · 14 countries' },
-  us_states: { label: 'US States', emoji: '🦅', description: '5 batches · 50 states' },
+  europe:    { label: 'Europe',    emoji: '🏰', description: 'From Iceland to Istanbul — 5 chapters' },
+  africa:    { label: 'Africa',    emoji: '🌍', description: 'Sahara to Savanna — 6 chapters' },
+  asia:      { label: 'Asia',      emoji: '🌏', description: 'Silk Road to the Pacific — 6 chapters' },
+  americas:  { label: 'Americas',  emoji: '🌎', description: 'Yukon to Patagonia — 4 chapters' },
+  oceania:   { label: 'Oceania',   emoji: '🌊', description: 'Ancient islands across the Pacific — 2 chapters' },
+  us_states: { label: 'US States', emoji: '🦅', description: 'All 50 states in 5 regional chapters' },
 };
 
 // ---------------------------------------------------------------------------

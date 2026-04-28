@@ -30,10 +30,10 @@ export function QuizResults({
   onGoHome,
   factCategory = 'world',
 }: QuizResultsProps) {
-  const accuracy = Math.round((score / totalQuestions) * 100);
-  const avgTimeMs = Math.round(
-    attempts.reduce((sum, a) => sum + a.timeMs, 0) / attempts.length,
-  );
+  const accuracy  = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
+  const avgTimeMs = attempts.length > 0
+    ? Math.round(attempts.reduce((sum, a) => sum + a.timeMs, 0) / attempts.length)
+    : 0;
 
   // Stable per-mount so re-renders don't re-roll
   const endMessage = useMemo(() => getEndMessage(getScoreTier(score, totalQuestions)), [score, totalQuestions]);

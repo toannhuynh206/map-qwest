@@ -21,6 +21,7 @@ const FILL_COLORS: Record<CountryFeedback, string | null> = {
   'correct-locked':   '#86efac',
   'incorrect-locked': '#fca5a5',
   missed:             '#9CA3AF',
+  target:             '#FF9500',
 };
 
 const STROKE_COLOR  = '#FFFFFF';

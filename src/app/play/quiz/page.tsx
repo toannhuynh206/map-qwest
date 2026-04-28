@@ -85,6 +85,7 @@ export default function QuizPage() {
     submitAnswer,
     nextQuestion,
     skipQuestion,
+    useHint,
     useFiftyFifty,
     resetQuiz,
     timeoutQuestion,
@@ -175,6 +176,11 @@ export default function QuizPage() {
   }, [quitQuiz]);
 
   const allCountryCodes = useMemo(() => Object.keys(COUNTRIES), []);
+
+  const handleHint = useCallback(
+    () => useHint(allCountryCodes, (code) => COUNTRIES[code]?.region),
+    [useHint, allCountryCodes],
+  );
 
   const handleFiftyFifty = useCallback(
     () => useFiftyFifty(allCountryCodes),
@@ -270,7 +276,7 @@ export default function QuizPage() {
 
           <QuizToolbar
             onSkip={handleSkip}
-            onHint={() => {}}
+            onHint={handleHint}
             onFiftyFifty={handleFiftyFifty}
             disabled={status !== 'playing'}
             hintsUsed={hintsUsed}

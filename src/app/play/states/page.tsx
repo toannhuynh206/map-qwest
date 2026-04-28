@@ -66,6 +66,7 @@ export default function StatesQuizPage() {
     submitAnswer,
     nextQuestion,
     skipQuestion,
+    useHint,
     useFiftyFifty,
     resetQuiz,
     timeoutQuestion,
@@ -137,6 +138,11 @@ export default function StatesQuizPage() {
   const handleSkip = useCallback(() => skipQuestion(), [skipQuestion]);
 
   const allStateCodes = useMemo(() => Object.keys(US_STATES), []);
+  const handleHint = useCallback(
+    () => useHint(allStateCodes, (code) => US_STATES[code]?.region),
+    [useHint, allStateCodes],
+  );
+
   const handleFiftyFifty = useCallback(
     () => useFiftyFifty(allStateCodes),
     [useFiftyFifty, allStateCodes],
@@ -214,7 +220,7 @@ export default function StatesQuizPage() {
 
         <QuizToolbar
           onSkip={handleSkip}
-          onHint={() => {}}
+          onHint={handleHint}
           onFiftyFifty={handleFiftyFifty}
           disabled={status !== 'playing'}
           hintsUsed={hintsUsed}

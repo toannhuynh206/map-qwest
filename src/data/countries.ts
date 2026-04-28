@@ -241,6 +241,10 @@ export const COUNTRIES: Record<string, CountryInfo> = {
   TON: { name: 'Tonga', alpha2: 'TO', alpha3: 'TON', numeric: '776', region: 'oceania', difficulty: 4, capital: "Nuku'alofa" },
   TUV: { name: 'Tuvalu', alpha2: 'TV', alpha3: 'TUV', numeric: '798', region: 'oceania', difficulty: 5, capital: 'Funafuti' },
   VUT: { name: 'Vanuatu', alpha2: 'VU', alpha3: 'VUT', numeric: '548', region: 'oceania', difficulty: 5, capital: 'Port Vila' },
+
+  // ── Territories / disputed (appear in TopoJSON) ─────────────────────────
+  TWN: { name: 'Taiwan', alpha2: 'TW', alpha3: 'TWN', numeric: '158', region: 'asia', difficulty: 3, capital: 'Taipei' },
+  XKX: { name: 'Kosovo', alpha2: 'XK', alpha3: 'XKX', numeric: '-99', region: 'europe', difficulty: 4, capital: 'Pristina' },
 } as const;
 
 // ---------------------------------------------------------------------------
