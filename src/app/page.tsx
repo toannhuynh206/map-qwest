@@ -103,6 +103,15 @@ const LEARNING = [
     accent: '#007AFF',
   },
   {
+    id: 'flat-explore',
+    title: 'Map Explorer',
+    description: 'Pan and zoom the flat map — tap any country to learn about it',
+    icon: '🗺️',
+    href: '/learn/explore',
+    available: true,
+    accent: '#34C759',
+  },
+  {
     id: 'globe',
     title: 'Globe Explorer',
     description: 'Spin the globe and discover every country',
