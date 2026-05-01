@@ -28,6 +28,7 @@ export const SMALL_COUNTRY_COORDS: Record<string, { lat: number; lng: number }> 
   SYC: { lat: -4.68, lng: 55.49 },      // Seychelles
   SGP: { lat: 1.35, lng: 103.82 },      // Singapore
   TON: { lat: -21.18, lng: -175.20 },   // Tonga
+  TTO: { lat: 10.65, lng: -61.52 },     // Trinidad and Tobago
   TUV: { lat: -7.11, lng: 177.65 },     // Tuvalu
   VAT: { lat: 41.90, lng: 12.45 },      // Vatican City
 };

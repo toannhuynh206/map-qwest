@@ -14,14 +14,25 @@ import { SMALL_COUNTRY_COORDS } from '@/data/country-coordinates';
 import { COUNTRIES } from '@/data/countries';
 import { useMapTheme } from '@/context/map-theme-context';
 
-const WORLD_TOPO_LOW  = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
-const WORLD_TOPO_HIGH = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json';
+// Always use the 50m topology — the flat map uses a CSS matrix transform for
+// pan/zoom so paths are never recalculated during interaction (no perf reason
+// to drop to 110m).  Keeping a single URL also means D3 zoom events can never
+// accidentally mask the shapeVisible check.
+const WORLD_TOPO = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json';
 
 // Zoom level at which dots give way to actual 50m topology shapes.
-// All SMALL_COUNTRY_COORDS entries (except VAT) exist in the 50m topology.
+// 3 button clicks at 1.5× each = zoom ~3.4, so shapes appear just after the 3rd click.
 const SHAPE_ZOOM_THRESHOLD = 3;
-// VAT is absent from every world-atlas topology — always a dot.
-const DOTS_ONLY = new Set(['VAT']);
+// Countries whose 50m shapes are too tiny or too scattered to be visible
+// even at maxZoom=50 — always rendered as dots.
+// VAT: not in any topology.
+// MCO: 0.02° wide → ~0.6 px at zoom 50.
+// NRU/SMR: 0.1°–0.12° wide → 3–4 px at zoom 50, too small.
+// TUV/MDV/KIR: scattered micro-atolls, each < 0.05° wide.
+const DOTS_ONLY = new Set(['VAT', 'MCO', 'NRU', 'SMR', 'TUV', 'MDV', 'KIR']);
+// Natural Earth at scale 160: world width in SVG base units.
+// Used to render 3 copies of the world for seamless horizontal wrapping.
+const WORLD_WIDTH = 875.6; // ≈ 2 * π * 0.8707 * 160
 
 const MARKER_FILL: Record<CountryFeedback, string> = {
   none:               '#AFAFAF',
@@ -44,16 +55,15 @@ interface MarkerPinProps {
   isAnswered: boolean;
   disabled: boolean;
   zoom: number;
+  opacity: number;
   onSelect: (alpha3: string) => void;
 }
 
-function MarkerPin({ alpha3, coords, fill, isAnswered, disabled, zoom, onSelect }: MarkerPinProps) {
+function MarkerPin({ alpha3, coords, fill, isAnswered, disabled, zoom, opacity, onSelect }: MarkerPinProps) {
   const touchStart = useRef<{ x: number; y: number } | null>(null);
-  // Grow the dot slightly as zoom increases (max 2x) so it feels like an
-  // island getting closer, before it transitions to the actual shape.
-  const growFactor = Math.min(2, 1 + (zoom - 1) / (SHAPE_ZOOM_THRESHOLD - 1));
-  const pinSize  = (6 / zoom) * growFactor;
-  const outerSize = pinSize + (4 / zoom) * growFactor;
+  // Dot maintains roughly constant screen-pixel size as zoom increases.
+  const pinSize  = 6 / zoom;
+  const outerSize = pinSize + 4 / zoom;
   const sw = 1 / zoom;
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -86,8 +96,8 @@ function MarkerPin({ alpha3, coords, fill, isAnswered, disabled, zoom, onSelect 
         stroke={isAnswered ? fill : '#58CC02'}
         strokeWidth={sw}
         strokeDasharray={isAnswered ? 'none' : `${1.2 / zoom} ${1.2 / zoom}`}
-        opacity={0.7}
-        style={{ transition: 'stroke 200ms ease' }}
+        opacity={0.7 * opacity}
+        style={{ transition: 'stroke 200ms ease, opacity 400ms ease' }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       />
@@ -96,9 +106,10 @@ function MarkerPin({ alpha3, coords, fill, isAnswered, disabled, zoom, onSelect 
         fill={fill}
         stroke="#FFFFFF"
         strokeWidth={sw}
+        opacity={opacity}
         style={{
           cursor: disabled ? 'default' : 'pointer',
-          transition: 'fill 200ms ease',
+          transition: 'fill 200ms ease, opacity 400ms ease',
         }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
@@ -128,12 +139,10 @@ export function InteractiveMap({
   showMiniMap = true,
   showZoomControls = false,
 }: InteractiveMapProps) {
-  const [zoom, setZoom]       = useState(initialZoom);
-  const [center, setCenter]   = useState<[number, number]>(initialCenter);
-  const [topoUrl, setTopoUrl] = useState(WORLD_TOPO_LOW);
-  const { colors }            = useMapTheme();
-  const containerRef          = useRef<HTMLDivElement>(null);
-  const topoTimerRef          = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [zoom, setZoom]     = useState(initialZoom);
+  const [center, setCenter] = useState<[number, number]>(initialCenter);
+  const { colors }          = useMapTheme();
+  const containerRef        = useRef<HTMLDivElement>(null);
 
   // Prevent double-tap zoom (D3 zoom intercepts touch events)
   useEffect(() => {
@@ -153,7 +162,7 @@ export function InteractiveMap({
   }, []);
 
   const handleZoomIn = useCallback(() => {
-    setZoom((z) => Math.min(z * 1.5, 20));
+    setZoom((z) => Math.min(z * 1.5, 50));
   }, []);
 
   const handleZoomOut = useCallback(() => {
@@ -178,32 +187,20 @@ export function InteractiveMap({
 
   const handleMoveEnd = useCallback(
     (position: { coordinates: [number, number]; zoom: number }) => {
-      setCenter(position.coordinates);
+      // Normalise longitude to [-180, 180] — Natural Earth maps ±180° to the
+      // same edge, so this "teleport" is visually seamless after a drag ends.
+      const lng = ((position.coordinates[0] + 180) % 360 + 360) % 360 - 180;
+      setCenter([lng, position.coordinates[1]]);
       setZoom(position.zoom);
-      // Switch to high-res topology after a short settle delay.
-      if (topoTimerRef.current) clearTimeout(topoTimerRef.current);
-      if (position.zoom >= SHAPE_ZOOM_THRESHOLD) {
-        topoTimerRef.current = setTimeout(() => setTopoUrl(WORLD_TOPO_HIGH), 250);
-      } else {
-        setTopoUrl(WORLD_TOPO_LOW);
-      }
     },
     [],
   );
-
-  // Drop to low-res as soon as the user starts dragging/pinching so the
-  // topology switch doesn't happen mid-gesture.
-  const handleInteractionStart = useCallback(() => {
-    if (topoTimerRef.current) { clearTimeout(topoTimerRef.current); topoTimerRef.current = null; }
-    setTopoUrl(WORLD_TOPO_LOW);
-  }, []);
 
   return (
     <div
       ref={containerRef}
       className="relative w-full h-full map-container overflow-hidden"
       style={{ background: colors.ocean, touchAction: 'none' }}
-      onPointerDown={handleInteractionStart}
     >
       <ComposableMap
         projection="geoNaturalEarth1"
@@ -218,62 +215,77 @@ export function InteractiveMap({
           center={center}
           onMoveEnd={handleMoveEnd}
           minZoom={1}
-          maxZoom={20}
+          maxZoom={50}
         >
-          <Geographies geography={topoUrl}>
-            {({ geographies }) =>
-              geographies.map((geo) => {
-                const numericId = geo.id || geo.properties?.iso_n3;
-                const alpha3 = numericToAlpha3(String(numericId));
-                if (!alpha3) return null;
+          {/* Three world copies (left / center / right) for seamless horizontal wrapping.
+              The <g> translate is in SVG base units; ZoomableGroup scales them
+              proportionally at every zoom level so the copies always align. */}
+          {([-WORLD_WIDTH, 0, WORLD_WIDTH] as const).map((dx, ci) => (
+            <g key={ci} transform={dx !== 0 ? `translate(${dx}, 0)` : undefined}>
+              <Geographies geography={WORLD_TOPO}>
+                {({ geographies }) =>
+                  geographies.map((geo) => {
+                    const numericId = geo.id || geo.properties?.iso_n3;
+                    const alpha3 = numericToAlpha3(String(numericId));
+                    if (!alpha3) return null;
+
+                    const feedback = feedbackMap[alpha3] || 'none';
+                    const region = COUNTRIES[alpha3]?.region ?? '';
+                    const baseFill = colors.getCountryFill(alpha3, region);
+
+                    return (
+                      <CountryPath
+                        key={`${ci}-${geo.rsmKey}`}
+                        geography={geo}
+                        countryCode={alpha3}
+                        feedback={feedback}
+                        disabled={disabled}
+                        dimmed={dimmedCountries.has(alpha3)}
+                        baseFill={baseFill}
+                        onSelect={handleCountrySelect}
+                      />
+                    );
+                  })
+                }
+              </Geographies>
+
+              {/* Marker pins for small countries.
+                  Dots fade out between DOT_FADE_START and DOT_FADE_END as the 50m
+                  topology shape grows large enough to see and tap.
+                  DOTS_ONLY countries keep full opacity — their shapes are sub-pixel
+                  even at maxZoom=50. */}
+              {Object.entries(SMALL_COUNTRY_COORDS).map(([alpha3, coords]) => {
+                // Compute dot opacity: 1 below fade start, linear fade, 0 above fade end.
+                const dotOpacity = DOTS_ONLY.has(alpha3)
+                  ? 1
+                  : zoom <= DOT_FADE_START
+                    ? 1
+                    : zoom >= DOT_FADE_END
+                      ? 0
+                      : 1 - (zoom - DOT_FADE_START) / (DOT_FADE_END - DOT_FADE_START);
+
+                if (dotOpacity <= 0) return null;
 
                 const feedback = feedbackMap[alpha3] || 'none';
-                const region = COUNTRIES[alpha3]?.region ?? '';
-                const baseFill = colors.getCountryFill(alpha3, region);
+                const fill = MARKER_FILL[feedback];
+                const isAnswered = feedback === 'correct' || feedback === 'incorrect' || feedback === 'reveal' || feedback === 'correct-locked' || feedback === 'incorrect-locked';
 
                 return (
-                  <CountryPath
-                    key={alpha3}
-                    geography={geo}
-                    countryCode={alpha3}
-                    feedback={feedback}
+                  <MarkerPin
+                    key={`${alpha3}-${ci}`}
+                    alpha3={alpha3}
+                    coords={coords}
+                    fill={fill}
+                    isAnswered={isAnswered}
                     disabled={disabled}
-                    dimmed={dimmedCountries.has(alpha3)}
-                    baseFill={baseFill}
+                    zoom={zoom}
+                    opacity={dotOpacity}
                     onSelect={handleCountrySelect}
                   />
                 );
-              })
-            }
-          </Geographies>
-
-          {/* Marker pins for small countries.
-              Hidden once the 50m topology is active (shapes render instead).
-              VAT is never in any topology so always shown. */}
-          {Object.entries(SMALL_COUNTRY_COORDS).map(([alpha3, coords]) => {
-            const shapeVisible =
-              !DOTS_ONLY.has(alpha3) &&
-              topoUrl === WORLD_TOPO_HIGH &&
-              zoom >= SHAPE_ZOOM_THRESHOLD;
-            if (shapeVisible) return null;
-
-            const feedback = feedbackMap[alpha3] || 'none';
-            const fill = MARKER_FILL[feedback];
-            const isAnswered = feedback === 'correct' || feedback === 'incorrect' || feedback === 'reveal' || feedback === 'correct-locked' || feedback === 'incorrect-locked';
-
-            return (
-              <MarkerPin
-                key={alpha3}
-                alpha3={alpha3}
-                coords={coords}
-                fill={fill}
-                isAnswered={isAnswered}
-                disabled={disabled}
-                zoom={zoom}
-                onSelect={handleCountrySelect}
-              />
-            );
-          })}
+              })}
+            </g>
+          ))}
         </ZoomableGroup>
       </ComposableMap>
 
